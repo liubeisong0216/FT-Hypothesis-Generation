@@ -30,3 +30,6 @@ outputs/
 
 # pdf
 *.pdf
+
+# data files
+/data/task_data/
