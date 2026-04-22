@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tooling caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# OS / editor files
+.DS_Store
+
+# Local outputs and experiment artifacts
+outputs/
+
+# Local matplotlib config/cache
+.matplotlib/
+
+# Environment files
+.env
+.env.*
+
+# pdf
+*.pdf

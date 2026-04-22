@@ -1,0 +1,68 @@
+[system]
+You are an expert ARC Python solver.
+Write only Python code and nothing else.
+The code must define transform_grid(input_grid: np.ndarray) -> np.ndarray or transform_grid(grid: np.ndarray) -> np.ndarray.
+Use only numpy and basic Python.
+Do not read files, use the network, inspect the environment, or add explanations outside the code.
+Each cell in the output should only be numbers from 0 to 9.
+
+[user]
+Example 0:
+Input:
+[[0 0 0 0 0 0 0 0]
+ [0 8 8 0 0 0 0 0]
+ [0 0 8 0 0 0 0 0]
+ [0 8 8 8 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]]
+Output:
+[[8 8 0 8 8 0]
+ [0 8 0 0 8 0]
+ [8 8 8 8 8 8]]
+
+Example 1:
+Input:
+[[0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 2 0 0 0 0]
+ [0 0 2 2 2 0 0 0]
+ [0 0 2 2 0 0 0 0]]
+Output:
+[[0 2 0 0 2 0]
+ [2 2 2 2 2 2]
+ [2 2 0 2 2 0]]
+
+Example 2:
+Input:
+[[0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 1 1 0]
+ [0 0 0 0 1 0 0 0]
+ [0 0 0 0 0 1 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]
+ [0 0 0 0 0 0 0 0]]
+Output:
+[[0 1 1 0 1 1]
+ [1 0 0 1 0 0]
+ [0 1 0 0 1 0]]
+
+Now, please write a python program transform_grid(input_grid: np.ndarray[int]) -> np.ndarray[int] that transforms the input grid to the corresponding output grid.
+
+Task examples:
+$task_examples
+
+Hint: You may want to use the following guidance to implement the function:
+$hypothesis
+
+$attempt_guidance
+
+The number in the input grid can be mapped to the following colors:
+0:black; 1:blue; 2:red; 3:green; 4:yellow; 5:grey; 6:fuschia; 7:orange; 8:teal; 9:brown
+
+Just reply with the implementation of transform_grid(input_grid: np.ndarray[int]) in Python and nothing else.

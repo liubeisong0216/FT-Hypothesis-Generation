@@ -1,0 +1,124 @@
+[system]
+You will be given a list of input-output pairs. Each input and output is a grid of numbers representing a visual grid. There is a SINGLE pattern that transforms each input grid to the corresponding output grid.
+The pattern may involve counting or sorting objects (e.g. sorting by size), comparing numbers (e.g. which shape or symbol appears the most? Which is the largest object? Which objects are the same size?), or repeating a pattern for a fixed number of time.
+There are other concepts that may be relevant.
+- Lines, rectangular shapes
+- Symmetries rotations, translations.
+- Shape upscaling or downscaling, elastic distortions.
+- Containing / being contained / being inside or outside of a perimeter.
+- Drawing lines, connecting points, orthogonal projections.
+- Copying, repeating objects.
+You should treat black cells as empty cells (backgrounds).
+The number in the input grid can be mapped to the following colors:
+0:black; 1:blue; 2:red; 3:green; 4:yellow; 5:grey; 6:fuschia; 7:orange; 8:teal; 9:brown
+
+[user]
+Case 0:
+Input:
+[[3 3 8]
+ [3 7 0]
+ [5 0 0]]
+Output:
+[[0 0 5]
+ [0 7 3]
+ [8 3 3]]
+
+Case 1:
+Input:
+[[5 5 2]
+ [1 0 0]
+ [0 0 0]]
+Output:
+[[0 0 0]
+ [0 0 1]
+ [2 5 5]]
+
+[assistant]
+Describing the input grid: In the input, you should see a black grid with a colored shape.
+Describing the size of the output grid: The output grid size is the same as the input grid.
+Describing how to transform the grid: To make the output, you have to rotate the whole grid two times. Imagine that the entire grid has been flipped vertically and horizontally.
+
+[user]
+Case 0:
+Input:
+[[0 1 0 1]
+ [0 0 0 1]
+ [1 0 1 0]
+ [0 0 0 1]
+ [4 4 4 4]
+ [0 2 0 2]
+ [0 0 0 2]
+ [2 0 0 2]
+ [2 2 2 0]]
+Output:
+[[0 0 0 0]
+ [0 0 0 0]
+ [0 0 3 3]
+ [3 3 3 3]]
+
+Case 1:
+Input:
+[[1 1 0 0]
+ [1 0 1 0]
+ [1 1 0 1]
+ [0 1 1 0]
+ [4 4 4 4]
+ [0 2 2 2]
+ [2 0 2 0]
+ [2 2 2 2]
+ [2 2 2 2]]
+Output:
+[[3 0 3 3]
+ [0 0 0 0]
+ [0 0 3 0]
+ [3 0 0 3]]
+
+Case 2:
+Input:
+[[0 1 0 0]
+ [1 0 1 1]
+ [1 1 1 0]
+ [1 1 1 0]
+ [4 4 4 4]
+ [0 0 0 0]
+ [0 2 0 2]
+ [2 2 0 2]
+ [0 2 0 0]]
+Output:
+[[0 3 0 0]
+ [3 3 3 0]
+ [0 0 3 3]
+ [3 0 3 0]]
+
+Case 3:
+Input:
+[[1 0 1 1]
+ [0 0 0 1]
+ [1 1 0 0]
+ [0 0 1 1]
+ [4 4 4 4]
+ [0 2 2 2]
+ [0 2 2 2]
+ [2 0 2 2]
+ [2 2 2 2]]
+Output:
+[[3 3 0 0]
+ [0 3 3 0]
+ [0 3 3 3]
+ [3 3 0 0]]
+
+[assistant]
+Describing the input grid: In the input, you should see a 4x4 square of blue and black boxes on top of a yellow line. Below the yellow line is a 4x4 square of red and black boxes.
+Describing the size of the output grid: The output grid size should be 4x4.
+Describing how to transform the grid: To make the output, you have to compare the squares in the top and bottom 4x4 square. If they match (both black or both color) make the output square black. If they do not match, make the output square green.
+
+[user]
+$task_cases
+
+Produce $num_hypotheses candidate transformation descriptions for the task above.
+Each candidate must be separated by a blank line.
+For each candidate, use exactly these three lines:
+Describing the input grid: ...
+Describing the size of the output grid: ...
+Describing how to transform the grid: ...
+Do not include any code.
