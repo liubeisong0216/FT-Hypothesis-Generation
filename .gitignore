@@ -32,4 +32,4 @@ outputs/
 *.pdf
 
 # data files
-data/participants_data/
+data/
