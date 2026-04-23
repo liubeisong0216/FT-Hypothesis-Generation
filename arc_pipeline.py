@@ -340,7 +340,10 @@ def _validate_program_ast(code_str: str) -> None:
 
 
 def _limited_import(name: str, globals_: Any = None, locals_: Any = None, fromlist: Any = (), level: int = 0) -> Any:
-    if name != "numpy":
+    # Numpy may lazily import internal submodules during common operations such as
+    # reductions and array creation helpers. Those imports should be allowed when
+    # generated code imports numpy itself, while non-numpy imports remain blocked.
+    if name != "numpy" and not name.startswith("numpy."):
         raise ImportError(f"Import of {name!r} is not allowed.")
     return __import__(name, globals_, locals_, fromlist, level)
 
@@ -354,13 +357,18 @@ def _safe_builtins() -> dict[str, Any]:
         "dict",
         "enumerate",
         "float",
+        "filter",
         "int",
+        "isinstance",
         "len",
         "list",
+        "map",
         "max",
         "min",
+        "next",
         "range",
         "reversed",
+        "round",
         "set",
         "slice",
         "sorted",
@@ -568,6 +576,7 @@ def solve_task(
 def run_batch_pipeline(
     tasks: dict[str, dict[str, list[ARCExample]]],
     *,
+    task_offset: int = 0,
     num_hypotheses: int = 4,
     programs_per_hypothesis: int = 1,
     hypothesis_config: Optional[LLMConfig] = None,
@@ -584,7 +593,11 @@ def run_batch_pipeline(
     processed = 0
     solved_tasks = 0
 
-    for task_name in sorted(tasks):
+    task_names = sorted(tasks)
+    if task_offset < 0:
+        raise ValueError("task_offset must be >= 0")
+
+    for task_name in task_names[task_offset:]:
         if task_limit is not None and processed >= task_limit:
             break
 
@@ -663,6 +676,7 @@ def run_batch_pipeline(
 def build_hypothesis_dataset(
     tasks: dict[str, dict[str, list[ARCExample]]],
     *,
+    task_offset: int = 0,
     num_hypotheses: int = 4,
     programs_per_hypothesis: int = 1,
     hypothesis_config: Optional[LLMConfig] = None,
@@ -676,6 +690,7 @@ def build_hypothesis_dataset(
     """
     batch_result = run_batch_pipeline(
         tasks,
+        task_offset=task_offset,
         num_hypotheses=num_hypotheses,
         programs_per_hypothesis=programs_per_hypothesis,
         hypothesis_config=hypothesis_config,
@@ -710,6 +725,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Optional cap on the number of tasks to process when building a dataset.",
+    )
+    parser.add_argument(
+        "--task-offset",
+        type=int,
+        default=0,
+        help="Number of tasks to skip before batch processing starts. Uses the same sorted task order as --task-limit.",
     )
     parser.add_argument(
         "--num-hypotheses",
@@ -764,6 +785,7 @@ def main() -> None:
 
     batch_result = run_batch_pipeline(
         tasks,
+        task_offset=args.task_offset,
         num_hypotheses=args.num_hypotheses,
         programs_per_hypothesis=args.programs_per_hypothesis,
         hypothesis_config=shared_config,
