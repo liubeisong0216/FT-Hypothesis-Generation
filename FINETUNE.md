@@ -102,3 +102,60 @@ If your GPU supports BF16, add:
 3. Run a tiny local MLX smoke test on Mac.
 4. Move the same split files to your GPU server.
 5. Run `train_hf_qlora.py` there.
+
+## 5. Evaluate the Fine-Tuned Model
+
+After training on GPU, evaluate the adapter on the held-out validation tasks:
+
+```bash
+python evaluate_hypothesis_model.py \
+  --model Qwen/Qwen2.5-3B-Instruct \
+  --adapter-path outputs/ft_runs/hf_qwen25_3b_qlora \
+  --dataset-json outputs/ft_dataset/current_verified_hypotheses.json \
+  --manifest-path outputs/ft_ready/current/manifest.json \
+  --split valid \
+  --load-in-4bit \
+  --output-json outputs/evals/hf_qwen25_3b_valid_summary.json \
+  --predictions-jsonl outputs/evals/hf_qwen25_3b_valid_predictions.jsonl
+```
+
+This script reports:
+
+- valid-format rate
+- raw exact-match rate
+- normalized exact-match rate
+- average best token-F1 against the gold hypotheses for each task
+
+## 6. End-to-End ARC Evaluation
+
+To evaluate the finetuned hypothesis model inside the full ARC loop:
+
+1. generate hypotheses with the finetuned model
+2. generate programs with an OpenAI model
+3. execute those programs on ARC train examples
+
+Example command:
+
+```bash
+python evaluate_end_to_end_arc.py \
+  --hypothesis-model Qwen/Qwen2.5-3B-Instruct \
+  --adapter-path outputs/ft_runs/hf_qwen25_3b_qlora \
+  --csv-path data/task_data/ARC_training_tasks.csv \
+  --manifest-path outputs/ft_ready/current/manifest.json \
+  --split valid \
+  --num-hypotheses 4 \
+  --programs-per-hypothesis 2 \
+  --program-model gpt-5.4-mini \
+  --load-in-4bit \
+  --output-json outputs/evals/end_to_end_valid_arc_eval.json
+```
+
+This produces a trace JSON with:
+
+- generated hypotheses
+- generated programs
+- train-set execution results
+- `solved_train`
+- `useful_hypotheses`
+
+This is the closest evaluation to the original dataset-generation pipeline.
