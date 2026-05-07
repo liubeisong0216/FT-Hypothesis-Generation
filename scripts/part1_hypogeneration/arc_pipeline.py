@@ -7,9 +7,6 @@ import json
 import os
 import re
 import signal
-import urllib.error
-import urllib.parse
-import urllib.request
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -189,8 +186,23 @@ def _is_gemini_model(model: str) -> bool:
     return model.lower().startswith("gemini")
 
 
-def _gemini_role(role: str) -> str:
-    return "model" if role == "assistant" else "user"
+def _build_gemini_prompt(messages: list[dict[str, str]]) -> tuple[str, str]:
+    system_chunks: list[str] = []
+    body_chunks: list[str] = []
+    for message in messages:
+        role = (message.get("role") or "user").strip().lower()
+        content = (message.get("content") or "").strip()
+        if not content:
+            continue
+        if role == "system":
+            system_chunks.append(content)
+        elif role == "assistant":
+            body_chunks.append(f"[assistant]\n{content}")
+        else:
+            body_chunks.append(f"[user]\n{content}")
+    if not body_chunks:
+        raise RuntimeError("Gemini request has no user/assistant content.")
+    return "\n\n".join(system_chunks).strip(), "\n\n".join(body_chunks).strip()
 
 
 def _chat_completion_gemini(
@@ -198,69 +210,66 @@ def _chat_completion_gemini(
     messages: list[dict[str, str]],
     config: LLMConfig,
 ) -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY is not set.")
+    try:
+        from google import genai
+        from google.genai import types
+    except ImportError as exc:
+        raise RuntimeError(
+            "google-genai is not installed. Install it with: pip install --upgrade google-genai"
+        ) from exc
 
-    system_parts: list[dict[str, str]] = []
-    contents: list[dict[str, Any]] = []
-    for message in messages:
-        role = message.get("role", "user")
-        content = (message.get("content") or "").strip()
-        if not content:
-            continue
-        if role == "system":
-            system_parts.append({"text": content})
-            continue
-        contents.append(
-            {
-                "role": _gemini_role(role),
-                "parts": [{"text": content}],
-            }
+    project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GEMINI_PROJECT")
+    location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key and not project:
+        raise RuntimeError(
+            "Set GEMINI_API_KEY/GOOGLE_API_KEY, or set GOOGLE_CLOUD_PROJECT for ADC-based Gemini Vertex usage."
         )
 
-    if not contents:
-        raise RuntimeError("Gemini request has no user/model content.")
+    system_text, prompt_text = _build_gemini_prompt(messages)
+    http_options = types.HttpOptions(api_version=os.getenv("GEMINI_API_VERSION", "v1"))
+    client_kwargs: dict[str, Any] = {"vertexai": True, "http_options": http_options}
+    if api_key:
+        # For Vertex API-key auth, google-genai forbids passing project/location directly.
+        client_kwargs["api_key"] = api_key
+    else:
+        client_kwargs["project"] = project
+        client_kwargs["location"] = location
 
-    payload: dict[str, Any] = {
-        "contents": contents,
-        "generationConfig": {
-            "temperature": config.temperature,
-            "maxOutputTokens": config.max_completion_tokens,
-        },
-    }
-    if system_parts:
-        payload["systemInstruction"] = {"parts": system_parts}
-
-    base_url = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
-    encoded_model = urllib.parse.quote(config.model, safe="")
-    url = f"{base_url}/models/{encoded_model}:generateContent?key={api_key}"
-    body = json.dumps(payload).encode("utf-8")
-    request = urllib.request.Request(
-        url,
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
+    client = genai.Client(**client_kwargs)
     try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            response_payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Gemini API HTTPError {exc.code}: {detail}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Gemini API connection error: {exc}") from exc
+        response = client.models.generate_content(
+            model=config.model,
+            contents=prompt_text,
+            config=types.GenerateContentConfig(
+                temperature=config.temperature,
+                max_output_tokens=config.max_completion_tokens,
+                system_instruction=system_text or None,
+                response_mime_type="text/plain",
+            ),
+        )
+        text = (response.text or "").strip()
+        if not text:
+            candidates = getattr(response, "candidates", None) or []
+            finish_reason = None
+            finish_message = None
+            if candidates:
+                first = candidates[0]
+                finish_reason = getattr(first, "finish_reason", None)
+                finish_message = getattr(first, "finish_message", None)
 
-    candidates = response_payload.get("candidates") or []
-    if not candidates:
-        raise RuntimeError(f"Gemini response has no candidates: {response_payload}")
-
-    parts = (candidates[0].get("content") or {}).get("parts") or []
-    text_chunks = [part.get("text", "") for part in parts if isinstance(part, dict) and part.get("text")]
-    if not text_chunks:
-        raise RuntimeError(f"Gemini response has no text parts: {response_payload}")
-    return "".join(text_chunks).strip()
+            if finish_message:
+                text = str(finish_message).strip()
+            if not text:
+                reason_text = str(finish_reason) if finish_reason is not None else "UNKNOWN"
+                raise RuntimeError(f"Gemini response has no text (finish_reason={reason_text}).")
+        return text
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"Gemini API error: {type(exc).__name__}: {exc}") from exc
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
 
 
 def _chat_completion(
