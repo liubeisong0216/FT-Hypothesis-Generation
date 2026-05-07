@@ -7,6 +7,9 @@ import json
 import os
 import re
 import signal
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -23,7 +26,8 @@ except ImportError:  # pragma: no cover - handled at runtime
 
 
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
-PROMPTS_DIR = Path(__file__).with_name("prompts")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROMPTS_DIR = PROJECT_ROOT / "prompts"
 
 
 @dataclass(frozen=True)
@@ -181,6 +185,84 @@ def _get_openai_client(client: Optional[Any] = None) -> Any:
     return OpenAI()
 
 
+def _is_gemini_model(model: str) -> bool:
+    return model.lower().startswith("gemini")
+
+
+def _gemini_role(role: str) -> str:
+    return "model" if role == "assistant" else "user"
+
+
+def _chat_completion_gemini(
+    *,
+    messages: list[dict[str, str]],
+    config: LLMConfig,
+) -> str:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set.")
+
+    system_parts: list[dict[str, str]] = []
+    contents: list[dict[str, Any]] = []
+    for message in messages:
+        role = message.get("role", "user")
+        content = (message.get("content") or "").strip()
+        if not content:
+            continue
+        if role == "system":
+            system_parts.append({"text": content})
+            continue
+        contents.append(
+            {
+                "role": _gemini_role(role),
+                "parts": [{"text": content}],
+            }
+        )
+
+    if not contents:
+        raise RuntimeError("Gemini request has no user/model content.")
+
+    payload: dict[str, Any] = {
+        "contents": contents,
+        "generationConfig": {
+            "temperature": config.temperature,
+            "maxOutputTokens": config.max_completion_tokens,
+        },
+    }
+    if system_parts:
+        payload["systemInstruction"] = {"parts": system_parts}
+
+    base_url = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
+    encoded_model = urllib.parse.quote(config.model, safe="")
+    url = f"{base_url}/models/{encoded_model}:generateContent?key={api_key}"
+    body = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            response_payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Gemini API HTTPError {exc.code}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Gemini API connection error: {exc}") from exc
+
+    candidates = response_payload.get("candidates") or []
+    if not candidates:
+        raise RuntimeError(f"Gemini response has no candidates: {response_payload}")
+
+    parts = (candidates[0].get("content") or {}).get("parts") or []
+    text_chunks = [part.get("text", "") for part in parts if isinstance(part, dict) and part.get("text")]
+    if not text_chunks:
+        raise RuntimeError(f"Gemini response has no text parts: {response_payload}")
+    return "".join(text_chunks).strip()
+
+
 def _chat_completion(
     *,
     messages: list[dict[str, str]],
@@ -188,8 +270,10 @@ def _chat_completion(
     client: Optional[Any] = None,
 ) -> str:
     llm_config = config or LLMConfig()
-    llm_client = _get_openai_client(client)
+    if _is_gemini_model(llm_config.model):
+        return _chat_completion_gemini(messages=messages, config=llm_config)
 
+    llm_client = _get_openai_client(client)
     response = llm_client.chat.completions.create(
         model=llm_config.model,
         temperature=llm_config.temperature,

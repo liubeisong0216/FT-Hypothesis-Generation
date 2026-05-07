@@ -164,3 +164,36 @@ python analyze_trace.py \
 2. Save `--trace-output-path`
 3. Inspect failures with `analyze_trace.py`
 4. Visualize interesting tasks with `visualize_task.py`
+
+
+Split（CPU）
+sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135 slurm/part2_split_cpu.sbatch
+
+Finetune（GPU）
+sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135 slurm/part2_finetune_gpu.sbatch
+
+
+Hypothesis eval（baseline / ft 可选）
+
+baseline:
+sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=baseline,SPLIT=valid slurm/part2_eval_hypothesis_gpu.sbatch
+
+ft:
+sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=ft,SPLIT=valid slurm/part2_eval_hypothesis_gpu.sbatch
+
+Hypothesis end-to-end eval
+
+base:
+sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=baseline,ARC_DATASET=train slurm/part2_eval_end2end_gpu.sbatch
+
+ft:
+sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=ft,ARC_DATASET=train slurm/part2_eval_end2end_gpu.sbatch
+
+
+End-to-end eval（baseline / ft + heldout/train 可选）
+
+FT + heldout:
+sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=ft,ARC_DATASET=heldout slurm/part2_eval_end2end_gpu.sbatch
+
+Baseline + heldout:
+sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=baseline,ARC_DATASET=heldout slurm/part2_eval_end2end_gpu.sbatch

@@ -126,6 +126,14 @@ def _write_json(path: Path, payload: Any) -> None:
         json.dump(payload, handle, ensure_ascii=False, indent=2)
 
 
+def _load_task_list(path: Path) -> list[str]:
+    with open(path, encoding="utf-8") as handle:
+        tasks = [line.strip() for line in handle if line.strip() and not line.strip().startswith("#")]
+    if not tasks:
+        raise ValueError(f"Task list is empty: {path}")
+    return tasks
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="End-to-end ARC evaluation using a finetuned hypothesis model plus program generation."
@@ -149,6 +157,10 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="Which manifest split to evaluate.",
     )
     parser.add_argument("--task-name", help="Optional single task to evaluate.")
+    parser.add_argument(
+        "--task-list-path",
+        help="Optional path to a newline-delimited task list file. If provided, only these tasks are evaluated.",
+    )
     parser.add_argument("--task-limit", type=int, default=None)
     parser.add_argument("--num-hypotheses", type=int, default=4)
     parser.add_argument("--programs-per-hypothesis", type=int, default=2)
@@ -184,6 +196,15 @@ def main() -> None:
         task_names = sorted(tasks)
         if allowed is not None:
             task_names = [task_name for task_name in task_names if task_name in allowed]
+        if args.task_list_path:
+            listed_tasks = _load_task_list(Path(args.task_list_path))
+            listed_set = set(listed_tasks)
+            task_names = [task_name for task_name in listed_tasks if task_name in tasks and task_name in set(task_names)]
+            missing = [task_name for task_name in listed_tasks if task_name not in tasks]
+            if missing:
+                print(f"Warning: {len(missing)} task(s) from task list were not found in CSV and will be skipped.")
+            if not task_names:
+                raise ValueError("No overlapping tasks between task list and selected dataset split.")
         if args.task_limit is not None:
             task_names = task_names[: args.task_limit]
 
@@ -316,6 +337,7 @@ def main() -> None:
             "manifest_path": args.manifest_path,
             "split": args.split,
             "task_name": args.task_name,
+            "task_list_path": args.task_list_path,
             "task_limit": args.task_limit,
             "num_hypotheses": args.num_hypotheses,
             "programs_per_hypothesis": args.programs_per_hypothesis,
