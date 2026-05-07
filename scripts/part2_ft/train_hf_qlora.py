@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 from pathlib import Path
 
 import torch
@@ -71,6 +72,43 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _make_sft_config(*, args: argparse.Namespace, has_valid: bool) -> SFTConfig:
+    params = set(inspect.signature(SFTConfig.__init__).parameters)
+    kwargs = {
+        "output_dir": args.output_dir,
+        "num_train_epochs": args.num_train_epochs,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
+        "per_device_train_batch_size": args.per_device_train_batch_size,
+        "per_device_eval_batch_size": args.per_device_eval_batch_size,
+        "gradient_accumulation_steps": args.gradient_accumulation_steps,
+        "warmup_ratio": args.warmup_ratio,
+        "logging_steps": args.logging_steps,
+        "save_steps": args.save_steps,
+        "save_total_limit": args.save_total_limit,
+        "eval_steps": args.eval_steps if has_valid else None,
+        "bf16": args.use_bf16,
+        "fp16": not args.use_bf16,
+        "gradient_checkpointing": args.gradient_checkpointing,
+        "report_to": args.report_to,
+        "completion_only_loss": True,
+        "packing": False,
+    }
+
+    if "evaluation_strategy" in params:
+        kwargs["evaluation_strategy"] = "steps" if has_valid else "no"
+    elif "eval_strategy" in params:
+        kwargs["eval_strategy"] = "steps" if has_valid else "no"
+
+    if "max_length" in params:
+        kwargs["max_length"] = args.max_seq_length
+    elif "max_seq_length" in params:
+        kwargs["max_seq_length"] = args.max_seq_length
+
+    filtered_kwargs = {key: value for key, value in kwargs.items() if key in params and value is not None}
+    return SFTConfig(**filtered_kwargs)
+
+
 def main() -> None:
     parser = _build_arg_parser()
     args = parser.parse_args()
@@ -116,28 +154,7 @@ def main() -> None:
         target_modules=_parse_target_modules(args.target_modules),
     )
 
-    training_args = SFTConfig(
-        output_dir=args.output_dir,
-        max_length=args.max_seq_length,
-        num_train_epochs=args.num_train_epochs,
-        learning_rate=args.learning_rate,
-        weight_decay=args.weight_decay,
-        per_device_train_batch_size=args.per_device_train_batch_size,
-        per_device_eval_batch_size=args.per_device_eval_batch_size,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
-        warmup_ratio=args.warmup_ratio,
-        logging_steps=args.logging_steps,
-        save_steps=args.save_steps,
-        save_total_limit=args.save_total_limit,
-        evaluation_strategy="steps" if has_valid else "no",
-        eval_steps=args.eval_steps if has_valid else None,
-        bf16=args.use_bf16,
-        fp16=not args.use_bf16,
-        gradient_checkpointing=args.gradient_checkpointing,
-        report_to=args.report_to,
-        completion_only_loss=True,
-        packing=False,
-    )
+    training_args = _make_sft_config(args=args, has_valid=has_valid)
 
     trainer = SFTTrainer(
         model=model,

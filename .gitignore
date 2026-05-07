@@ -33,3 +33,9 @@ outputs/
 
 # data files
 data/
+
+# outputs
+outputs/
+
+# slurm logs
+slurm/
