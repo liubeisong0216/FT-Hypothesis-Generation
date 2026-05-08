@@ -346,10 +346,18 @@ def generate_hypotheses(
 
 
 def _extract_code(raw_text: str) -> str:
-    fenced_match = re.search(r"```(?:python)?\s*(.*?)```", raw_text, re.DOTALL | re.IGNORECASE)
+    """
+    Strip markdown fences from model output. Models often truncate before a closing ```
+    fence; then a fenced-only regex misses and the leftover ```python line breaks ast.parse.
+    """
+    text = raw_text.strip()
+    fenced_match = re.search(r"```(?:python|py)?\s*(.*?)```", text, re.DOTALL | re.IGNORECASE)
     if fenced_match:
         return fenced_match.group(1).strip()
-    return raw_text.strip()
+    open_fence = re.match(r"^```(?:python|py)?\s*", text, re.IGNORECASE)
+    if open_fence:
+        return text[open_fence.end() :].strip()
+    return text
 
 
 def generate_program(

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from string import Template
 from typing import Any
 
 from arc_pipeline import (
@@ -12,7 +13,6 @@ from arc_pipeline import (
     generate_program,
     load_arc_tasks,
 )
-from build_training_dataset import DEFAULT_USER_PROMPT_TEMPLATE
 from evaluate_hypothesis_model import _load_split_tasks
 
 
@@ -21,6 +21,7 @@ REQUIRED_PREFIXES = [
     "Describing the size of the output grid:",
     "Describing how to transform the grid:",
 ]
+DEFAULT_HYPOTHESIS_PROMPT_TEMPLATE = str(Path(__file__).resolve().parents[2] / "prompts/hypothesis_generation.prompt")
 
 
 def _normalize_text(text: str) -> str:
@@ -126,6 +127,14 @@ def _write_json(path: Path, payload: Any) -> None:
         json.dump(payload, handle, ensure_ascii=False, indent=2)
 
 
+def _build_hypothesis_prompt(*, task_text: str, num_hypotheses: int, prompt_template_path: Path) -> str:
+    template_text = prompt_template_path.read_text(encoding="utf-8")
+    return Template(template_text).safe_substitute(
+        task_cases=task_text,
+        num_hypotheses=str(num_hypotheses),
+    ).strip()
+
+
 def _load_task_list(path: Path) -> list[str]:
     with open(path, encoding="utf-8") as handle:
         tasks = [line.strip() for line in handle if line.strip() and not line.strip().startswith("#")]
@@ -168,11 +177,22 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--hypothesis-max-new-tokens", type=int, default=256)
     parser.add_argument("--hypothesis-temperature", type=float, default=0.7)
     parser.add_argument("--hypothesis-top-p", type=float, default=0.95)
+    parser.add_argument(
+        "--hypothesis-prompt-template",
+        default=DEFAULT_HYPOTHESIS_PROMPT_TEMPLATE,
+        help="Prompt template file used to generate hypotheses (supports $task_cases and $num_hypotheses).",
+    )
     parser.add_argument("--load-in-4bit", action="store_true")
     parser.add_argument("--use-bf16", action="store_true")
     parser.add_argument("--program-model", default="gpt-5.4-mini")
     parser.add_argument("--program-temperature", type=float, default=0.2)
     parser.add_argument("--program-max-completion-tokens", type=int, default=1200)
+    parser.add_argument(
+        "--metric",
+        choices=["train", "test"],
+        default="test",
+        help="Which split to use for success_rate (task solved if pass_all).",
+    )
     parser.add_argument(
         "--output-json",
         default="outputs/evals/end_to_end_arc_eval.json",
@@ -184,6 +204,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = _build_arg_parser()
     args = parser.parse_args()
+    prompt_template_path = Path(args.hypothesis_prompt_template)
+    if not prompt_template_path.exists():
+        raise FileNotFoundError(f"Hypothesis prompt template not found: {prompt_template_path}")
 
     tasks = load_arc_tasks(args.csv_path)
     if args.task_name:
@@ -221,12 +244,16 @@ def main() -> None:
     )
 
     traces: list[dict[str, Any]] = []
-    solved_tasks = 0
-    dataset_examples = 0
+    solved_tasks_train = 0
+    dataset_examples_train = 0
+    solved_tasks_test = 0
+    test_total_examples = 0
+    test_correct_examples = 0
 
     for index, task_name in enumerate(task_names, start=1):
         task_examples = tasks[task_name]
         train_examples = task_examples.get("train", [])
+        test_examples = task_examples.get("test", [])
         if not train_examples:
             traces.append(
                 {
@@ -238,7 +265,11 @@ def main() -> None:
             continue
 
         task_text = format_task_for_prompt(train_examples)
-        prompt = DEFAULT_USER_PROMPT_TEMPLATE.format(task_text=task_text).strip()
+        prompt = _build_hypothesis_prompt(
+            task_text=task_text,
+            num_hypotheses=args.num_hypotheses,
+            prompt_template_path=prompt_template_path,
+        )
         hypotheses = _generate_hypotheses(
             prompt=prompt,
             tokenizer=tokenizer,
@@ -297,8 +328,26 @@ def main() -> None:
         )
         solved_train = bool(best_candidate and best_candidate["evaluation"]["pass_all"])
         if solved_train:
-            solved_tasks += 1
-        dataset_examples += len(useful_hypotheses)
+            solved_tasks_train += 1
+        dataset_examples_train += len(useful_hypotheses)
+
+        # Evaluate generalization on test examples (exact match per example).
+        solved_test = False
+        best_test_evaluation: dict[str, Any] | None = None
+        if best_candidate is not None and test_examples:
+            # Some datasets may omit test outputs; those cannot be scored.
+            test_examples_with_outputs = [ex for ex in test_examples if ex.output_grid is not None]
+            if test_examples_with_outputs:
+                best_test_evaluation = evaluate_program(best_candidate["program"], test_examples_with_outputs)
+                solved_test = bool(best_test_evaluation.get("pass_all"))
+                test_total_examples += int(best_test_evaluation.get("total_examples", 0) or 0)
+                test_correct_examples += int(best_test_evaluation.get("correct_count", 0) or 0)
+            else:
+                # No scorable test outputs for this task.
+                best_test_evaluation = None
+
+        if solved_test:
+            solved_tasks_test += 1
 
         traces.append(
             {
@@ -313,6 +362,8 @@ def main() -> None:
                     "best_evaluation": best_candidate["evaluation"] if best_candidate else None,
                     "solved_train": solved_train,
                     "useful_hypotheses": useful_hypotheses,
+                    "solved_test": solved_test,
+                    "best_test_evaluation": best_test_evaluation,
                 },
             }
         )
@@ -323,11 +374,24 @@ def main() -> None:
         )
 
     processed = len(task_names)
+    success_rate_train = solved_tasks_train / processed if processed else 0.0
+    success_rate_test = solved_tasks_test / processed if processed else 0.0
+    test_accuracy = (test_correct_examples / test_total_examples) if test_total_examples else 0.0
+
+    # Backward-compatible field names:
+    # - `success_rate` is the primary metric requested by --metric (default: test).
+    # - The train split results are preserved with *_train suffix.
+    success_rate = success_rate_test if args.metric == "test" else success_rate_train
     summary = {
         "processed": processed,
-        "successful_tasks": solved_tasks,
-        "dataset_examples": dataset_examples,
-        "success_rate": solved_tasks / processed if processed else 0.0,
+        "successful_tasks_train": solved_tasks_train,
+        "dataset_examples_train": dataset_examples_train,
+        "success_rate_train": success_rate_train,
+        "successful_tasks_test": solved_tasks_test,
+        "dataset_examples_test": test_total_examples,
+        "correct_test_examples": test_correct_examples,
+        "test_accuracy": test_accuracy,
+        "success_rate": success_rate,
     }
     payload = {
         "config": {
@@ -342,6 +406,8 @@ def main() -> None:
             "num_hypotheses": args.num_hypotheses,
             "programs_per_hypothesis": args.programs_per_hypothesis,
             "program_model": args.program_model,
+            "metric": args.metric,
+            "hypothesis_prompt_template": str(prompt_template_path),
         },
         "summary": summary,
         "traces": traces,
@@ -351,9 +417,9 @@ def main() -> None:
     print(
         "Summary: "
         f"processed={summary['processed']}, "
-        f"successful_tasks={summary['successful_tasks']}, "
-        f"dataset_examples={summary['dataset_examples']}, "
-        f"success_rate={summary['success_rate']:.2%}"
+        f"success_rate={summary['success_rate']:.2%} "
+        f"(train={summary['success_rate_train']:.2%}, test={summary['successful_tasks_test']}/{processed}), "
+        f"test_accuracy={summary['test_accuracy']:.2%}"
     )
     print(f"Saved evaluation trace to {args.output_json}")
 

@@ -5,6 +5,7 @@ import json
 import random
 from collections import defaultdict
 from pathlib import Path
+from string import Template
 from typing import Any
 
 from build_training_dataset import DEFAULT_USER_PROMPT_TEMPLATE
@@ -21,7 +22,21 @@ def _load_records(path: Path) -> list[dict[str, Any]]:
     raise ValueError(f"Unsupported dataset format in {path}")
 
 
-def _prompt_from_record(record: dict[str, Any]) -> str:
+def _prompt_from_record(
+    record: dict[str, Any],
+    *,
+    user_prompt_template: str | None,
+    num_hypotheses_in_prompt: int,
+) -> str:
+    if user_prompt_template is not None:
+        task_text = record.get("input")
+        if not task_text:
+            raise ValueError("Record is missing input field required by hypothesis prompt template.")
+        return Template(user_prompt_template).safe_substitute(
+            task_cases=str(task_text).strip(),
+            num_hypotheses=str(num_hypotheses_in_prompt),
+        ).strip()
+
     messages = record.get("messages")
     if isinstance(messages, list) and messages:
         first = messages[0]
@@ -53,6 +68,8 @@ def build_splits(
     *,
     valid_ratio: float,
     seed: int,
+    user_prompt_template: str | None,
+    num_hypotheses_in_prompt: int,
 ) -> tuple[list[dict[str, str]], list[dict[str, str]], dict[str, Any]]:
     if not 0.0 <= valid_ratio < 1.0:
         raise ValueError("valid_ratio must be in [0.0, 1.0).")
@@ -64,7 +81,11 @@ def build_splits(
             raise ValueError("Each record must include task_name.")
         by_task[str(task_name)].append(
             {
-                "prompt": _prompt_from_record(record),
+                "prompt": _prompt_from_record(
+                    record,
+                    user_prompt_template=user_prompt_template,
+                    num_hypotheses_in_prompt=num_hypotheses_in_prompt,
+                ),
                 "completion": _completion_from_record(record),
             }
         )
@@ -151,6 +172,20 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=42,
         help="Random seed used to shuffle tasks before splitting.",
     )
+    parser.add_argument(
+        "--hypothesis-prompt-template-path",
+        default=None,
+        help=(
+            "Optional path to a hypothesis prompt template file. "
+            "If provided, prompts are rebuilt from record['input'] using $task_cases and $num_hypotheses placeholders."
+        ),
+    )
+    parser.add_argument(
+        "--num-hypotheses-in-prompt",
+        type=int,
+        default=1,
+        help="Value substituted into $num_hypotheses when --hypothesis-prompt-template-path is set.",
+    )
     return parser
 
 
@@ -160,12 +195,18 @@ def main() -> None:
 
     input_json = Path(args.input_json)
     output_dir = Path(args.output_dir)
+    prompt_template_text: str | None = None
+    if args.hypothesis_prompt_template_path:
+        prompt_template_path = Path(args.hypothesis_prompt_template_path)
+        prompt_template_text = prompt_template_path.read_text(encoding="utf-8")
 
     records = _load_records(input_json)
     train_rows, valid_rows, summary = build_splits(
         records,
         valid_ratio=args.valid_ratio,
         seed=args.seed,
+        user_prompt_template=prompt_template_text,
+        num_hypotheses_in_prompt=args.num_hypotheses_in_prompt,
     )
 
     _write_jsonl(output_dir / "train.jsonl", train_rows)

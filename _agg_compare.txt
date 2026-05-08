@@ -1,0 +1,6 @@
+baseline: {'processed': 50, 'ok': 50, 'summary': {'processed': 50, 'successful_tasks': 1, 'dataset_examples': 1, 'success_rate': 0.02}, 'solved_train': 1, 'tasks_with_useful_hyp': 1, 'mean_best_acc': 0.11, 'mean_useful_count': 0.02}
+ft: {'processed': 50, 'ok': 50, 'summary': {'processed': 50, 'successful_tasks': 0, 'dataset_examples': 0, 'success_rate': 0.0}, 'solved_train': 0, 'tasks_with_useful_hyp': 0, 'mean_best_acc': 0.04166666666666666, 'mean_useful_count': 0.0}
+delta solved_train: -1
+delta tasks_with_useful: -1
+delta mean_best_acc: -0.0683
+delta mean_useful_count: -0.0200
