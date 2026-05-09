@@ -41,6 +41,15 @@ def _print_summary(data: dict[str, Any]) -> None:
         f"dataset_examples={summary.get('dataset_examples')} | "
         f"success_rate={summary.get('success_rate', 0.0):.2%}"
     )
+    if "test_examples_total" in summary or "successful_tasks_test" in summary:
+        print(
+            f"test_examples_correct={summary.get('test_examples_correct', 0)}/"
+            f"{summary.get('test_examples_total', 0)} | "
+            f"test_example_accuracy={summary.get('test_example_accuracy', 0.0):.2%} | "
+            f"successful_tasks_test={summary.get('successful_tasks_test', 0)}/"
+            f"{summary.get('test_tasks_scored', 0)} | "
+            f"success_rate_test={summary.get('success_rate_test', 0.0):.2%}"
+        )
     print()
 
 

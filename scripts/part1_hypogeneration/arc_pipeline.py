@@ -9,7 +9,7 @@ import re
 import signal
 from collections import defaultdict
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from string import Template
 from typing import Any, Callable, Iterable, Optional
@@ -186,6 +186,69 @@ def _is_gemini_model(model: str) -> bool:
     return model.lower().startswith("gemini")
 
 
+def _openai_model_base_id(model: str) -> str:
+    """Strip common provider prefixes so rules match the underlying model id."""
+    m = model.strip().lower()
+    for sep in ("/", ":"):
+        if sep in m:
+            tail = m.rsplit(sep, 1)[-1]
+            if tail:
+                m = tail
+    return m
+
+
+def _openai_requires_default_temperature(model: str) -> bool:
+    """
+    Per-model OpenAI restrictions: some ids only allow the default temperature (1).
+
+    Not all gpt-5 sub-families share the same rules (e.g. gpt-5.4-mini vs gpt-5.5).
+    Extend this list when the API returns unsupported_value for temperature.
+    """
+    base = _openai_model_base_id(model)
+    # API ids may use gpt-5.5 or gpt-5-5; both only allow default temperature.
+    if base.startswith("gpt-5.5") or base.startswith("gpt-5-5"):
+        return True
+    return base.startswith(("o1", "o3", "o4"))
+
+
+def _openai_effective_temperature(model: str, requested: float) -> float:
+    if _openai_requires_default_temperature(model):
+        return 1.0
+    return requested
+
+
+def _openai_benefits_from_high_hypothesis_token_budget(model: str) -> bool:
+    """
+    Reasoning-style models often consume completion budget before emitting visible text.
+    Default LLMConfig.max_completion_tokens (900) then yields empty message.content.
+    """
+    base = _openai_model_base_id(model)
+    if base.startswith("gpt-5.5") or base.startswith("gpt-5-5"):
+        return True
+    return base.startswith(("o1", "o3", "o4"))
+
+
+def _chat_assistant_text(message: Any) -> str:
+    """Extract user-visible assistant text from a chat completion message."""
+    content = getattr(message, "content", None)
+    if isinstance(content, str) and content.strip():
+        return content
+    if isinstance(content, list):
+        chunks: list[str] = []
+        for part in content:
+            if isinstance(part, dict):
+                if part.get("type") == "text" and part.get("text"):
+                    chunks.append(str(part["text"]))
+            else:
+                text = getattr(part, "text", None)
+                if isinstance(text, str) and text:
+                    chunks.append(text)
+        joined = "".join(chunks).strip()
+        if joined:
+            return joined
+    return ""
+
+
 def _build_gemini_prompt(messages: list[dict[str, str]]) -> tuple[str, str]:
     system_chunks: list[str] = []
     body_chunks: list[str] = []
@@ -283,13 +346,14 @@ def _chat_completion(
         return _chat_completion_gemini(messages=messages, config=llm_config)
 
     llm_client = _get_openai_client(client)
+    temperature = _openai_effective_temperature(llm_config.model, llm_config.temperature)
     response = llm_client.chat.completions.create(
         model=llm_config.model,
-        temperature=llm_config.temperature,
+        temperature=temperature,
         max_completion_tokens=llm_config.max_completion_tokens,
         messages=messages,
     )
-    return response.choices[0].message.content or ""
+    return _chat_assistant_text(response.choices[0].message)
 
 
 def _normalize_hypothesis_block(block: str) -> str:
@@ -337,9 +401,16 @@ def generate_hypotheses(
         task_cases=task_text,
         num_hypotheses=num_hypotheses,
     )
+    effective_config = config or LLMConfig()
+    if (
+        not _is_gemini_model(effective_config.model)
+        and _openai_benefits_from_high_hypothesis_token_budget(effective_config.model)
+        and effective_config.max_completion_tokens <= 900
+    ):
+        effective_config = replace(effective_config, max_completion_tokens=16_000)
     raw_text = _chat_completion(
         messages=messages,
-        config=config,
+        config=effective_config,
         client=client,
     )
     return _parse_hypothesis_blocks(raw_text, num_hypotheses)
@@ -693,6 +764,10 @@ def run_batch_pipeline(
     traces: list[dict[str, Any]] = []
     processed = 0
     solved_tasks = 0
+    test_examples_total = 0
+    test_examples_correct = 0
+    test_tasks_scored = 0
+    solved_tasks_test = 0
 
     task_names = sorted(tasks)
     if task_offset < 0:
@@ -743,6 +818,19 @@ def run_batch_pipeline(
                     }
                 )
 
+        test_predictions = result.get("test_predictions") or []
+        scored_flags = [
+            bool(item.get("matches_known_output"))
+            for item in test_predictions
+            if isinstance(item, dict) and "matches_known_output" in item
+        ]
+        if scored_flags:
+            test_tasks_scored += 1
+            test_examples_total += len(scored_flags)
+            test_examples_correct += sum(1 for passed in scored_flags if passed)
+            if all(scored_flags):
+                solved_tasks_test += 1
+
         if logger:
             logger(
                 f"[{processed}] {task_name}: "
@@ -751,11 +839,19 @@ def run_batch_pipeline(
             )
 
     success_rate = solved_tasks / processed if processed else 0.0
+    test_example_accuracy = test_examples_correct / test_examples_total if test_examples_total else 0.0
+    test_task_success_rate = solved_tasks_test / test_tasks_scored if test_tasks_scored else 0.0
     summary = {
         "processed": processed,
         "successful_tasks": solved_tasks,
         "dataset_examples": len(dataset),
         "success_rate": success_rate,
+        "test_examples_total": test_examples_total,
+        "test_examples_correct": test_examples_correct,
+        "test_example_accuracy": test_example_accuracy,
+        "test_tasks_scored": test_tasks_scored,
+        "successful_tasks_test": solved_tasks_test,
+        "success_rate_test": test_task_success_rate,
     }
 
     if logger:
@@ -764,7 +860,9 @@ def run_batch_pipeline(
             f"processed={processed}, "
             f"successful_tasks={solved_tasks}, "
             f"dataset_examples={len(dataset)}, "
-            f"success_rate={success_rate:.2%}"
+            f"success_rate={success_rate:.2%}, "
+            f"test_example_accuracy={test_example_accuracy:.2%}, "
+            f"successful_tasks_test={solved_tasks_test}/{test_tasks_scored}"
         )
 
     return {
@@ -810,6 +908,14 @@ def _write_json(path: str | Path, payload: Any) -> None:
         json.dump(payload, handle, ensure_ascii=False, indent=2)
 
 
+def _load_task_list(path: str | Path) -> list[str]:
+    with open(path, encoding="utf-8") as handle:
+        tasks = [line.strip() for line in handle if line.strip() and not line.strip().startswith("#")]
+    if not tasks:
+        raise ValueError(f"Task list is empty: {path}")
+    return tasks
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="ARC hypothesis -> program -> execution pipeline")
     parser.add_argument(
@@ -820,6 +926,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--task-name",
         help="If provided, solve a single task instead of building a dataset.",
+    )
+    parser.add_argument(
+        "--task-list-path",
+        help=(
+            "Optional path to a newline-delimited task list file. "
+            "If provided, batch mode runs only these tasks in file order."
+        ),
     )
     parser.add_argument(
         "--task-limit",
@@ -848,7 +961,20 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
-        help="OpenAI model to use for both hypothesis and program generation.",
+        help=(
+            "Default OpenAI model when --hypothesis-model / --program-model are omitted. "
+            "Otherwise use those flags for per-stage models."
+        ),
+    )
+    parser.add_argument(
+        "--hypothesis-model",
+        default=None,
+        help=f"Model for hypothesis generation (default: same as --model, currently {DEFAULT_MODEL!r}).",
+    )
+    parser.add_argument(
+        "--program-model",
+        default=None,
+        help=f"Model for program generation (default: same as --model, currently {DEFAULT_MODEL!r}).",
     )
     parser.add_argument(
         "--output-path",
@@ -866,7 +992,10 @@ def main() -> None:
     args = parser.parse_args()
 
     tasks = load_arc_tasks(args.csv_path)
-    shared_config = LLMConfig(model=args.model)
+    hypothesis_model = args.hypothesis_model or args.model
+    program_model = args.program_model or args.model
+    hypothesis_config = LLMConfig(model=hypothesis_model)
+    program_config = LLMConfig(model=program_model, temperature=0.2, max_completion_tokens=1200)
 
     if args.task_name:
         if args.task_name not in tasks:
@@ -876,21 +1005,37 @@ def main() -> None:
             tasks[args.task_name],
             num_hypotheses=args.num_hypotheses,
             programs_per_hypothesis=args.programs_per_hypothesis,
-            hypothesis_config=shared_config,
-            program_config=LLMConfig(model=args.model, temperature=0.2, max_completion_tokens=1200),
+            hypothesis_config=hypothesis_config,
+            program_config=program_config,
         )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         if args.output_path:
             _write_json(args.output_path, result)
         return
 
+    selected_tasks = tasks
+    if args.task_list_path:
+        listed_tasks = _load_task_list(args.task_list_path)
+        selected_tasks = {
+            task_name: tasks[task_name]
+            for task_name in listed_tasks
+            if task_name in tasks
+        }
+        missing = [task_name for task_name in listed_tasks if task_name not in tasks]
+        if missing:
+            print(
+                f"Warning: {len(missing)} task(s) from task list were not found in CSV and will be skipped."
+            )
+        if not selected_tasks:
+            raise ValueError("No overlapping tasks between task list and CSV.")
+
     batch_result = run_batch_pipeline(
-        tasks,
+        selected_tasks,
         task_offset=args.task_offset,
         num_hypotheses=args.num_hypotheses,
         programs_per_hypothesis=args.programs_per_hypothesis,
-        hypothesis_config=shared_config,
-        program_config=LLMConfig(model=args.model, temperature=0.2, max_completion_tokens=1200),
+        hypothesis_config=hypothesis_config,
+        program_config=program_config,
         task_limit=args.task_limit,
     )
     dataset = batch_result["dataset"]

@@ -1,0 +1,31 @@
+[system]
+You are an expert ARC solver.
+
+ARC tasks require inferring a single transformation rule from the training input-output pairs and applying it to the test input. Each grid is a 2D array of integers representing colors. Treat 0 as background. Colors are encoded as:
+0 black, 1 blue, 2 red, 3 green, 4 yellow, 5 grey, 6 fuchsia, 7 orange, 8 teal, 9 brown.
+
+The rule may involve objects, colors, counting, symmetry, rotation, translation, containment, copying, pattern completion, resizing, cropping, or other visual transformations.
+
+You will be given ARC train examples and one test input grid.
+Infer the transformation rule and propose multiple possible output grids for the test input.
+
+Return valid JSON only. Do not include markdown fences. Do not include explanations.
+Each cell must be an integer from 0 to 9.
+
+[user]
+Train examples:
+$train_cases
+
+Test input:
+$test_input
+
+Return exactly $num_candidates candidate output grids in this JSON format:
+{"candidates": [grid1, grid2, ...]}
+
+Rules:
+1) Output must be strict JSON.
+2) "candidates" must be a list of exactly $num_candidates grids.
+3) Each grid must be a 2D array of integers in [0, 9].
+4) Each candidate grid should have the output dimensions implied by the training examples.
+5) Each candidate grid must be your best prediction for the test output, not an explanation.
+6) If uncertain, make the candidates diverse plausible predictions while remaining consistent with the training examples.

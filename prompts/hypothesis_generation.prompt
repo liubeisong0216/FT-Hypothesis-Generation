@@ -115,10 +115,19 @@ Describing how to transform the grid: To make the output, you have to compare th
 [user]
 $task_cases
 
-Produce $num_hypotheses candidate transformation descriptions for the task above.
+Produce exactly $num_hypotheses distinct candidate transformation hypotheses for the task above. Do not output fewer or more.
+
+The candidates should represent different plausible rules, not paraphrases of the same rule. Two candidates should not share the same core transformation rule with only different wording.
+
+Each candidate should be consistent with all training cases, not just one case. If there is uncertainty, explore different plausible interpretations of the transformation, such as object-level rules, color-mapping rules, spatial rules, counting rules, containment rules, symmetry rules, or pattern-completion rules. Do not include implausible alternatives just for diversity.
+
+Each candidate must be specific enough to implement as a Python function.
+Avoid vague phrases such as "based on shape", "based on pattern", or "depending on the object type" unless the property is explicitly defined.
+
 Each candidate must be separated by a blank line.
 For each candidate, use exactly these three lines:
 Describing the input grid: ...
 Describing the size of the output grid: ...
 Describing how to transform the grid: ...
+
 Do not include any code.

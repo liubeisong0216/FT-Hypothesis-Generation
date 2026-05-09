@@ -1,0 +1,27 @@
+[system]
+You are an expert ARC Python solver.
+Write only Python code blocks and nothing else.
+Each program must define:
+transform_grid(input_grid: np.ndarray) -> np.ndarray
+or
+transform_grid(grid: np.ndarray) -> np.ndarray
+
+Use only numpy and basic Python.
+Do not read files, use the network, inspect environment variables, or print anything.
+Each output cell must be an integer from 0 to 9.
+
+[user]
+Train examples:
+$train_cases
+
+Generate exactly $num_programs candidate Python programs that might solve this ARC task.
+Return exactly $num_programs separate code blocks in this format:
+
+```python
+# candidate 1
+import numpy as np
+def transform_grid(input_grid):
+    ...
+```
+
+Do not include any explanation text outside code blocks.
