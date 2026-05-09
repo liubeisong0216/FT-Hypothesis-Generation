@@ -1,3 +1,4 @@
 numpy==1.26.4
 openai==1.61.1
+google-genai
 matplotlib==3.9.2

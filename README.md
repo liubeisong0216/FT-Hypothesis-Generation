@@ -1,35 +1,26 @@
-# FT-Hypothesis-Generation
+# Part 1 Experiment Summary
 
-Minimal ARC hypothesis -> program -> execution pipeline.
+This document summarizes the current Part 1 ARC experiments. All four experiments use the same 100-task random sample:
 
-## Files
+```text
+data/task_data/train_random100_seed42.txt
+```
 
-- `arc_pipeline.py`: generate hypotheses, generate programs, evaluate on training examples, build dataset, save traces
-- `visualize_task.py`: visualize all input/output examples for one `task_name`
-- `analyze_trace.py`: inspect saved trace files and export readable analysis text
+which is sampled from the original ARC training task CSV:
 
-## Data
+```text
+data/task_data/ARC_training_tasks.csv
+```
 
-Main CSV files:
-
-- `data/task_data/ARC_training_tasks.csv`
-- `data/task_data/ARC_evaluation_tasks.csv`
-
-Each task is grouped by `task_name`. The code uses only training examples for hypothesis/program generation and evaluation.
-
-## Requirements
-
-- Python 3.10+
-- `numpy`
-- `openai`
-- `matplotlib` for visualization
-- `OPENAI_API_KEY` set in your environment
-
-Optional:
-
-- `OPENAI_MODEL` if you want a default model other than `gpt-4o`
+Part 1 is only evaluating ARC behavior through prompting, program generation, and execution. The fine-tuning pipeline in `scripts/part2_ft/` is not used for these experiments.
 
 ## Setup
+
+Run commands from the repository root:
+
+```bash
+cd /Users/liubeisong/Desktop/2026_Spring/CCM/FT-Hypothesis-Generation
+```
 
 Create and activate a virtual environment:
 
@@ -38,162 +29,209 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-Install dependencies:
+Install the Part 1 dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 1. Run The Pipeline
-
-Run one task:
+Set the OpenAI API key:
 
 ```bash
-python arc_pipeline.py \
+export OPENAI_API_KEY=...
+```
+
+The baseline scripts import helpers from `arc_pipeline.py`, so set `PYTHONPATH` before running:
+
+```bash
+export PYTHONPATH="$PWD/scripts/part1_hypogeneration:$PYTHONPATH"
+```
+
+
+## Experiment 1: Direct Output Grid Baseline
+
+Goal: ask `gpt-5.4-mini` to directly generate candidate output grids for each test input. This experiment does not generate hypotheses or programs.
+
+Configuration:
+
+- Hypothesis generation: none
+- Program generation: none
+- Output generation model: `gpt-5.4-mini`
+- Candidates per test example: `6`
+- Output directory: `outputs/random100_baseline/`
+
+Run:
+
+```bash
+python scripts/part1_hypogeneration/baseline_direct_output.py \
   --csv-path data/task_data/ARC_training_tasks.csv \
-  --task-name 00d62c1b.json \
-  --num-hypotheses 2 \
-  --programs-per-hypothesis 1 \
+  --task-list-path data/task_data/train_random100_seed42.txt \
   --model gpt-5.4-mini \
-  --output-path outputs/00d62c1b_full.json
+  --num-candidates 6 \
+  --output-json outputs/random100_baseline/trace.json
 ```
 
-Run a small batch and save both dataset and trace:
+Saved result summary:
+
+- Processed tasks: `100`
+- Scored test examples: `105`
+- Top-1 test example accuracy: `12 / 105 = 11.43%`
+- Top-6 test example accuracy: `16 / 105 = 15.24%`
+- Top-1 task success rate: `8 / 100 = 8.00%`
+- Top-6 task success rate: `12 / 100 = 12.00%`
+
+## Experiment 2: Direct Program Baseline
+
+Goal: ask `gpt-5.4-mini` to directly generate six candidate Python programs per task, evaluate those programs on the training examples, select the best program by train performance, then score that selected program on the test examples.
+
+Configuration:
+
+- Hypothesis generation: none
+- Program generation model: `gpt-5.4-mini`
+- Programs per task: `6`
+- Selection criterion: best training-set execution result
+- Test metric: selected program evaluated on known test outputs
+- Output directory: `outputs/random100_program/`
+
+Run:
 
 ```bash
-python arc_pipeline.py \
+python scripts/part1_hypogeneration/baseline_direct_programs.py \
   --csv-path data/task_data/ARC_training_tasks.csv \
-  --task-limit 3 \
-  --num-hypotheses 2 \
-  --programs-per-hypothesis 1 \
+  --task-list-path data/task_data/train_random100_seed42.txt \
   --model gpt-5.4-mini \
-  --output-path outputs/train3_dataset.json \
-  --trace-output-path outputs/train3_trace.json
+  --num-programs 6 \
+  --output-json outputs/random100_program/trace.json
 ```
 
-### `arc_pipeline.py` parameters
+Saved result summary:
 
-- `--csv-path`: path to ARC CSV file
-- `--task-name`: solve one specific task; if omitted, run batch mode
-- `--task-limit`: max number of tasks in batch mode
-- `--num-hypotheses`: number of candidate hypotheses generated per task
-- `--programs-per-hypothesis`: number of code candidates generated per hypothesis
-- `--model`: OpenAI model name, for example `gpt-5.4-mini`
-- `--output-path`: save JSON result
-- `--trace-output-path`: in batch mode, save full trace including hypotheses, programs, evaluations, and errors
+- Processed tasks: `100`
+- Requested programs per task: `6`
+- Test examples: `105`
+- Selected-program test example accuracy: `34 / 105 = 32.38%`
+- Selected-program task success rate: `30 / 100 = 30.00%`
+- Top-6 and selected-program metrics are the same in the saved summary for this run.
 
-### Output files
+## Experiment 3: Hypothesis Plus Program
 
-- Single-task mode:
-  - full result JSON with `hypotheses`, `candidate_results`, `best_program`, `best_hypothesis`, `best_evaluation`
-- Batch mode:
-  - dataset JSON with `(task_name, input, output)`
-  - trace JSON with all candidate hypotheses/programs and evaluation results
+Goal: ask `gpt-5.4-mini` to generate three natural-language hypotheses per task. For each hypothesis, ask `gpt-5.4-mini` to generate two candidate programs. Evaluate all programs on the training examples, select the best one, and score it on the test examples.
 
-## 2. Visualize A Task
+Configuration:
 
-Show all examples for one task:
+- Hypothesis generation model: `gpt-5.4-mini`
+- Hypotheses per task: `3`
+- Program generation model: `gpt-5.4-mini`
+- Programs per hypothesis: `2`
+- Total program attempts per task: up to `6`
+- Selection criterion: best training-set execution result
+- Test metric: selected best program evaluated on known test outputs
+- Output directory: `outputs/random100_hypo_program/`
 
-```bash
-python visualize_task.py \
-  --task-name 00d62c1b.json \
-  --csv-path data/task_data/ARC_training_tasks.csv
-```
-
-Save visualization to file:
+Run:
 
 ```bash
-python visualize_task.py \
-  --task-name 00d62c1b.json \
+python scripts/part1_hypogeneration/arc_pipeline.py \
   --csv-path data/task_data/ARC_training_tasks.csv \
-  --save-path outputs/00d62c1b.png \
-  --no-show
+  --task-list-path data/task_data/train_random100_seed42.txt \
+  --num-hypotheses 3 \
+  --programs-per-hypothesis 2 \
+  --model gpt-5.4-mini \
+  --output-path outputs/random100_hypo_program/dataset.json \
+  --trace-output-path outputs/random100_hypo_program/trace.json
 ```
 
-### `visualize_task.py` parameters
+Saved result summary:
 
-- `--task-name`: task to visualize
-- `--csv-path`: path to ARC CSV file
-- `--save-path`: optional image output path
-- `--no-show`: save only, do not open an interactive window
+- Processed tasks: `100`
+- Tasks solved on train: `26 / 100 = 26.00%`
+- Verified hypothesis examples harvested: `52`
+- Test examples: `105`
+- Test example accuracy: `31 / 105 = 29.52%`
+- Test task success rate: `27 / 100 = 27.00%`
 
-## 3. Analyze Trace Files
+There is also a second saved run at `outputs/random100_hypo_program2/` with similar settings:
 
-List all tasks in a trace:
+- Tasks solved on train: `24 / 100 = 24.00%`
+- Verified hypothesis examples harvested: `46`
+- Test example accuracy: `27 / 103 = 26.21%`
+- Test task success rate: `25 / 98 = 25.51%`
+
+## Experiment 4: High-Quality Hypothesis Plus Program
+
+Goal: use `gpt-5.5` to generate higher-quality hypotheses, then still use `gpt-5.4-mini` for program generation. As in Experiment 3, each task gets three hypotheses and two program attempts per hypothesis. The best program is selected by training-set execution and scored on test examples.
+
+Configuration:
+
+- Hypothesis generation model: `gpt-5.5`
+- Hypotheses per task: `3`
+- Program generation model: `gpt-5.4-mini`
+- Programs per hypothesis: `2`
+- Total program attempts per task: up to `6`
+- Selection criterion: best training-set execution result
+- Test metric: selected best program evaluated on known test outputs
+- Output directory: `outputs/random100_goodhypo_program/`
+
+Run:
 
 ```bash
-python analyze_trace.py \
-  --trace-path outputs/train3_trace.json \
+python scripts/part1_hypogeneration/arc_pipeline.py \
+  --csv-path data/task_data/ARC_training_tasks.csv \
+  --task-list-path data/task_data/train_random100_seed42.txt \
+  --num-hypotheses 3 \
+  --programs-per-hypothesis 2 \
+  --hypothesis-model gpt-5.5 \
+  --program-model gpt-5.4-mini \
+  --output-path outputs/random100_goodhypo_program/dataset.json \
+  --trace-output-path outputs/random100_goodhypo_program/trace.json
+```
+
+Saved result summary:
+
+- Processed tasks: `100`
+- Tasks solved on train: `85 / 100 = 85.00%`
+- Verified hypothesis examples harvested: `224`
+- Test examples: `104`
+- Test example accuracy: `87 / 104 = 83.65%`
+- Test task success rate: `82 / 99 = 82.83%`
+
+## Inspecting Results
+
+For Experiment 3 and Experiment 4 traces, use `analyze_trace.py`:
+
+```bash
+python scripts/part1_hypogeneration/analyze_trace.py \
+  --trace-path outputs/random100_goodhypo_program/trace.json \
   --list-tasks
 ```
 
-Analyze one task and save to txt:
+Inspect one task in detail:
 
 ```bash
-python analyze_trace.py \
-  --trace-path outputs/train3_trace.json \
-  --task-name 007bbfb7.json \
-  --output-path outputs/007bbfb7_analysis.txt
+python scripts/part1_hypogeneration/analyze_trace.py \
+  --trace-path outputs/random100_goodhypo_program/trace.json \
+  --task-name 00d62c1b.json \
+  --hide-programs
 ```
 
-Export all task details to one txt:
+Export a compact text report:
 
 ```bash
-python analyze_trace.py \
-  --trace-path outputs/train3_trace.json \
+python scripts/part1_hypogeneration/analyze_trace.py \
+  --trace-path outputs/random100_goodhypo_program/trace.json \
   --all-task-details \
   --hide-programs \
   --max-candidates 2 \
-  --output-path outputs/train3_all_tasks_analysis.txt
+  --output-path outputs/random100_goodhypo_program/analysis.txt
 ```
 
-### `analyze_trace.py` parameters
+The direct-output and direct-program baselines use separate trace schemas, so inspect their JSON files directly or use the summaries in their output directories:
 
-- `--trace-path`: path to trace JSON file
-- `--task-name`: show details for one task
-- `--list-tasks`: show summary table for all tasks
-- `--all-task-details`: show detailed analysis for every task
-- `--hide-programs`: do not print generated code
-- `--show-task-text`: include the full formatted task prompt
-- `--max-candidates`: limit number of candidate results shown
-- `--output-path`: save analysis text to file
+```text
+outputs/random100_baseline/readme.md
+outputs/random100_program/readme.md
+```
 
-## Suggested Workflow
+## Main Takeaway
 
-1. Run a small batch with `arc_pipeline.py`
-2. Save `--trace-output-path`
-3. Inspect failures with `analyze_trace.py`
-4. Visualize interesting tasks with `visualize_task.py`
-
-
-Split（CPU）
-sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135 slurm/part2_split_cpu.sbatch
-
-Finetune（GPU）
-sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135 slurm/part2_finetune_gpu.sbatch
-
-
-Hypothesis eval（baseline / ft 可选）
-
-baseline:
-sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=baseline,SPLIT=valid slurm/part2_eval_hypothesis_gpu.sbatch
-
-ft:
-sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=ft,SPLIT=valid slurm/part2_eval_hypothesis_gpu.sbatch
-
-Hypothesis end-to-end eval
-
-base:
-sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=baseline,ARC_DATASET=train slurm/part2_eval_end2end_gpu.sbatch
-
-ft:
-sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=ft,ARC_DATASET=train slurm/part2_eval_end2end_gpu.sbatch
-
-
-End-to-end eval（baseline / ft + heldout/train 可选）
-
-FT + heldout:
-sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=ft,ARC_DATASET=heldout slurm/part2_eval_end2end_gpu.sbatch
-
-Baseline + heldout:
-sbatch --export=ALL,RUN_TAG=all400_seed42_qwen25_3b_20260507_102135,EVAL_MODEL=baseline,ARC_DATASET=heldout slurm/part2_eval_end2end_gpu.sbatch
+On the same 100-task sample, direct output generation is weakest, direct program generation improves substantially, same-model hypothesis-plus-program is similar or slightly worse than direct program generation, and high-quality `gpt-5.5` hypotheses paired with `gpt-5.4-mini` program generation gives the strongest result by a large margin.
