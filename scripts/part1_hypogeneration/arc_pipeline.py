@@ -392,14 +392,17 @@ def generate_hypotheses(
     *,
     config: Optional[LLMConfig] = None,
     client: Optional[Any] = None,
+    prompt_path: str | Path | None = None,
+    task_hint: str = "",
 ) -> list[str]:
     """
     Call an LLM to generate candidate natural-language hypotheses.
     """
     messages = _parse_prompt_messages(
-        PROMPTS_DIR / "hypothesis_generation.prompt",
+        prompt_path or PROMPTS_DIR / "hypothesis_generation.prompt",
         task_cases=task_text,
         num_hypotheses=num_hypotheses,
+        task_hint=task_hint.strip() or "No hint provided.",
     )
     effective_config = config or LLMConfig()
     if (
@@ -669,6 +672,8 @@ def solve_task(
     hypothesis_config: Optional[LLMConfig] = None,
     program_config: Optional[LLMConfig] = None,
     client: Optional[Any] = None,
+    hypothesis_prompt_path: str | Path | None = None,
+    task_hint: str = "",
 ) -> dict[str, Any]:
     """
     Run the full hypothesis -> program -> execution pipeline for one task.
@@ -684,6 +689,8 @@ def solve_task(
         num_hypotheses=num_hypotheses,
         config=hypothesis_config,
         client=client,
+        prompt_path=hypothesis_prompt_path,
+        task_hint=task_hint,
     )
 
     candidate_results: list[dict[str, Any]] = []
@@ -734,6 +741,7 @@ def solve_task(
 
     return {
         "task_text": task_text,
+        "task_hint": task_hint,
         "hypotheses": hypotheses,
         "candidate_results": candidate_results,
         "best_program": best_candidate["program"] if best_candidate else None,
@@ -756,6 +764,8 @@ def run_batch_pipeline(
     client: Optional[Any] = None,
     task_limit: Optional[int] = None,
     logger: Optional[Callable[[str], None]] = print,
+    hypothesis_prompt_path: str | Path | None = None,
+    task_hints: Optional[dict[str, str]] = None,
 ) -> dict[str, Any]:
     """
     Run the batch pipeline and return both the final dataset and full task traces.
@@ -786,6 +796,8 @@ def run_batch_pipeline(
                 hypothesis_config=hypothesis_config,
                 program_config=program_config,
                 client=client,
+                hypothesis_prompt_path=hypothesis_prompt_path,
+                task_hint=(task_hints or {}).get(task_name, ""),
             )
         except Exception as exc:  # noqa: BLE001
             traces.append(
@@ -883,6 +895,8 @@ def build_hypothesis_dataset(
     client: Optional[Any] = None,
     task_limit: Optional[int] = None,
     logger: Optional[Callable[[str], None]] = print,
+    hypothesis_prompt_path: str | Path | None = None,
+    task_hints: Optional[dict[str, str]] = None,
 ) -> list[dict[str, str]]:
     """
     Build a dataset of (task_text, useful_hypothesis) pairs.
@@ -897,6 +911,8 @@ def build_hypothesis_dataset(
         client=client,
         task_limit=task_limit,
         logger=logger,
+        hypothesis_prompt_path=hypothesis_prompt_path,
+        task_hints=task_hints,
     )
     return batch_result["dataset"]
 
@@ -914,6 +930,31 @@ def _load_task_list(path: str | Path) -> list[str]:
     if not tasks:
         raise ValueError(f"Task list is empty: {path}")
     return tasks
+
+
+def _task_name_from_hint_id(task_id: str) -> str:
+    task_id = task_id.strip()
+    return task_id if task_id.endswith(".json") else f"{task_id}.json"
+
+
+def _load_task_hints(path: str | Path) -> dict[str, str]:
+    hints: dict[str, str] = {}
+    with open(path, newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = {field.strip(): field for field in reader.fieldnames or []}
+        if "task_id" not in fieldnames or "hint" not in fieldnames:
+            raise ValueError("Hint CSV must contain `task_id` and `hint` columns.")
+        task_id_field = fieldnames["task_id"]
+        hint_field = fieldnames["hint"]
+        for row in reader:
+            task_id = (row.get(task_id_field) or "").strip()
+            hint = (row.get(hint_field) or "").strip()
+            if not task_id or not hint:
+                continue
+            hints[_task_name_from_hint_id(task_id)] = hint
+    if not hints:
+        raise ValueError(f"No hints loaded from {path}")
+    return hints
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -977,6 +1018,21 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help=f"Model for program generation (default: same as --model, currently {DEFAULT_MODEL!r}).",
     )
     parser.add_argument(
+        "--hypothesis-prompt-path",
+        default=str(PROMPTS_DIR / "hypothesis_generation.prompt"),
+        help=(
+            "Prompt template for hypothesis generation. "
+            "Templates may use $task_cases, $num_hypotheses, and optionally $task_hint."
+        ),
+    )
+    parser.add_argument(
+        "--hint-csv-path",
+        help=(
+            "Optional CSV with task_id and hint columns. task_id may omit the .json suffix. "
+            "When set, the per-task hint is passed to the hypothesis prompt as $task_hint."
+        ),
+    )
+    parser.add_argument(
         "--output-path",
         help="Optional path to save JSON results.",
     )
@@ -996,6 +1052,8 @@ def main() -> None:
     program_model = args.program_model or args.model
     hypothesis_config = LLMConfig(model=hypothesis_model)
     program_config = LLMConfig(model=program_model, temperature=0.2, max_completion_tokens=1200)
+    task_hints = _load_task_hints(args.hint_csv_path) if args.hint_csv_path else {}
+    hypothesis_prompt_path = Path(args.hypothesis_prompt_path)
 
     if args.task_name:
         if args.task_name not in tasks:
@@ -1007,6 +1065,8 @@ def main() -> None:
             programs_per_hypothesis=args.programs_per_hypothesis,
             hypothesis_config=hypothesis_config,
             program_config=program_config,
+            hypothesis_prompt_path=hypothesis_prompt_path,
+            task_hint=task_hints.get(args.task_name, ""),
         )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         if args.output_path:
@@ -1037,6 +1097,8 @@ def main() -> None:
         hypothesis_config=hypothesis_config,
         program_config=program_config,
         task_limit=args.task_limit,
+        hypothesis_prompt_path=hypothesis_prompt_path,
+        task_hints=task_hints,
     )
     dataset = batch_result["dataset"]
     print(json.dumps(dataset[:3], ensure_ascii=False, indent=2))
