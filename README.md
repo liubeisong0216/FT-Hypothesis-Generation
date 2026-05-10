@@ -208,9 +208,3 @@ python scripts/part1_hypogeneration/trace_to_csv.py \
 ```
 
 Use `--view candidates` to inspect generated hypotheses and candidate programs.
-
-For detailed result discussion, see:
-
-```text
-PART1_RESULTS_ANALYSIS.md
-```
