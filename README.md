@@ -1,18 +1,24 @@
-# Part 1 Experiment Summary
+# Part 1 Experiment Overview
 
-This document summarizes the current Part 1 ARC experiments. All four experiments use the same 100-task random sample:
+This repository currently focuses on Part 1: ARC-style hypothesis generation, program generation, and execution-based evaluation. The fine-tuning pipeline in `scripts/part2_ft/` is not used for these experiments.
+
+All experiments use the same 100-task random sample:
 
 ```text
 data/task_data/train_random100_seed42.txt
 ```
 
-which is sampled from the original ARC training task CSV:
+The sampled tasks come from:
 
 ```text
 data/task_data/ARC_training_tasks.csv
 ```
 
-Part 1 is only evaluating ARC behavior through prompting, program generation, and execution. The fine-tuning pipeline in `scripts/part2_ft/` is not used for these experiments.
+Human-written hints and difficulty labels are stored in:
+
+```text
+data/task_data/train_hints_with_difficulty.csv
+```
 
 ## Setup
 
@@ -35,22 +41,21 @@ Install the Part 1 dependencies:
 pip install -r requirements.txt
 ```
 
-Set the OpenAI API key:
+Set the API key:
 
 ```bash
 export OPENAI_API_KEY=...
 ```
 
-The baseline scripts import helpers from `arc_pipeline.py`, so set `PYTHONPATH` before running:
+The baseline scripts import helpers from `arc_pipeline.py`, so set `PYTHONPATH` before running them:
 
 ```bash
 export PYTHONPATH="$PWD/scripts/part1_hypogeneration:$PYTHONPATH"
 ```
 
+## Experiment 0: Direct Output Grid
 
-## Experiment 1: Direct Output Grid Baseline
-
-Goal: ask `gpt-5.4-mini` to directly generate candidate output grids for each test input. This experiment does not generate hypotheses or programs.
+This baseline asks `gpt-5.4-mini` to directly generate candidate output grids for each test input. It does not generate hypotheses or programs.
 
 Configuration:
 
@@ -58,7 +63,7 @@ Configuration:
 - Program generation: none
 - Output generation model: `gpt-5.4-mini`
 - Candidates per test example: `6`
-- Output directory: `outputs/random100_baseline/`
+- Final output directory: `final_outputs/0_output_grid/`
 
 Run:
 
@@ -71,18 +76,9 @@ python scripts/part1_hypogeneration/baseline_direct_output.py \
   --output-json outputs/random100_baseline/trace.json
 ```
 
-Saved result summary:
+## Experiment 1: Program Only
 
-- Processed tasks: `100`
-- Scored test examples: `105`
-- Top-1 test example accuracy: `12 / 105 = 11.43%`
-- Top-6 test example accuracy: `16 / 105 = 15.24%`
-- Top-1 task success rate: `8 / 100 = 8.00%`
-- Top-6 task success rate: `12 / 100 = 12.00%`
-
-## Experiment 2: Direct Program Baseline
-
-Goal: ask `gpt-5.4-mini` to directly generate six candidate Python programs per task, evaluate those programs on the training examples, select the best program by train performance, then score that selected program on the test examples.
+This baseline asks `gpt-5.4-mini` to directly generate candidate Python programs. Each program defines a grid transformation, is evaluated on the training examples, and the best training-set program is selected for test evaluation.
 
 Configuration:
 
@@ -90,8 +86,7 @@ Configuration:
 - Program generation model: `gpt-5.4-mini`
 - Programs per task: `6`
 - Selection criterion: best training-set execution result
-- Test metric: selected program evaluated on known test outputs
-- Output directory: `outputs/random100_program/`
+- Final output directory: `final_outputs/1_program_only/`
 
 Run:
 
@@ -104,18 +99,9 @@ python scripts/part1_hypogeneration/baseline_direct_programs.py \
   --output-json outputs/random100_program/trace.json
 ```
 
-Saved result summary:
+## Experiment 2: Hypothesis + Program
 
-- Processed tasks: `100`
-- Requested programs per task: `6`
-- Test examples: `105`
-- Selected-program test example accuracy: `34 / 105 = 32.38%`
-- Selected-program task success rate: `30 / 100 = 30.00%`
-- Top-6 and selected-program metrics are the same in the saved summary for this run.
-
-## Experiment 3: Hypothesis Plus Program
-
-Goal: ask `gpt-5.4-mini` to generate three natural-language hypotheses per task. For each hypothesis, ask `gpt-5.4-mini` to generate two candidate programs. Evaluate all programs on the training examples, select the best one, and score it on the test examples.
+This experiment first asks `gpt-5.4-mini` to generate natural-language hypotheses. For each hypothesis, `gpt-5.4-mini` generates candidate programs. All programs are evaluated on the training examples, and the best program is selected for test evaluation.
 
 Configuration:
 
@@ -125,8 +111,7 @@ Configuration:
 - Programs per hypothesis: `2`
 - Total program attempts per task: up to `6`
 - Selection criterion: best training-set execution result
-- Test metric: selected best program evaluated on known test outputs
-- Output directory: `outputs/random100_hypo_program/`
+- Final output directory: `final_outputs/2_hypo_program/`
 
 Run:
 
@@ -141,25 +126,40 @@ python scripts/part1_hypogeneration/arc_pipeline.py \
   --trace-output-path outputs/random100_hypo_program/trace.json
 ```
 
-Saved result summary:
+## Experiment 3: Hint + Hypothesis + Program
 
-- Processed tasks: `100`
-- Tasks solved on train: `26 / 100 = 26.00%`
-- Verified hypothesis examples harvested: `52`
-- Test examples: `105`
-- Test example accuracy: `31 / 105 = 29.52%`
-- Test task success rate: `27 / 100 = 27.00%`
+This experiment is the same as Experiment 2, except each task includes a human-written hint in the hypothesis-generation prompt. The hint is intended to guide the model toward the core transformation rule.
 
-There is also a second saved run at `outputs/random100_hypo_program2/` with similar settings:
+Configuration:
 
-- Tasks solved on train: `24 / 100 = 24.00%`
-- Verified hypothesis examples harvested: `46`
-- Test example accuracy: `27 / 103 = 26.21%`
-- Test task success rate: `25 / 98 = 25.51%`
+- Hint source: `data/task_data/train_hints_with_difficulty.csv`
+- Hypothesis prompt: `prompts/hypothesis_generation_with_hint.prompt`
+- Hypothesis generation model: `gpt-5.4-mini`
+- Hypotheses per task: `3`
+- Program generation model: `gpt-5.4-mini`
+- Programs per hypothesis: `2`
+- Total program attempts per task: up to `6`
+- Selection criterion: best training-set execution result
+- Final output directory: `final_outputs/3_hint_hypo_program/`
 
-## Experiment 4: High-Quality Hypothesis Plus Program
+Run:
 
-Goal: use `gpt-5.5` to generate higher-quality hypotheses, then still use `gpt-5.4-mini` for program generation. As in Experiment 3, each task gets three hypotheses and two program attempts per hypothesis. The best program is selected by training-set execution and scored on test examples.
+```bash
+python scripts/part1_hypogeneration/arc_pipeline.py \
+  --csv-path data/task_data/ARC_training_tasks.csv \
+  --task-list-path data/task_data/train_random100_seed42.txt \
+  --hint-csv-path data/task_data/train_hints_with_difficulty.csv \
+  --hypothesis-prompt-path prompts/hypothesis_generation_with_hint.prompt \
+  --num-hypotheses 3 \
+  --programs-per-hypothesis 2 \
+  --model gpt-5.4-mini \
+  --output-path outputs/random100_hint_hypo_program/dataset.json \
+  --trace-output-path outputs/random100_hint_hypo_program/trace.json
+```
+
+## Experiment 4: High-Quality Hypothesis + Program
+
+This experiment uses `gpt-5.5` to generate higher-quality hypotheses, then still uses `gpt-5.4-mini` for program generation. The rest of the pipeline matches Experiment 2: generate programs, evaluate on training examples, select the best program, and evaluate on test examples.
 
 Configuration:
 
@@ -169,8 +169,7 @@ Configuration:
 - Programs per hypothesis: `2`
 - Total program attempts per task: up to `6`
 - Selection criterion: best training-set execution result
-- Test metric: selected best program evaluated on known test outputs
-- Output directory: `outputs/random100_goodhypo_program/`
+- Final output directory: `final_outputs/4_good_hypo_program/`
 
 Run:
 
@@ -186,52 +185,32 @@ python scripts/part1_hypogeneration/arc_pipeline.py \
   --trace-output-path outputs/random100_goodhypo_program/trace.json
 ```
 
-Saved result summary:
+## Inspecting And Exporting Results
 
-- Processed tasks: `100`
-- Tasks solved on train: `85 / 100 = 85.00%`
-- Verified hypothesis examples harvested: `224`
-- Test examples: `104`
-- Test example accuracy: `87 / 104 = 83.65%`
-- Test task success rate: `82 / 99 = 82.83%`
-
-## Inspecting Results
-
-For Experiment 3 and Experiment 4 traces, use `analyze_trace.py`:
-
-```bash
-python scripts/part1_hypogeneration/analyze_trace.py \
-  --trace-path outputs/random100_goodhypo_program/trace.json \
-  --list-tasks
-```
-
-Inspect one task in detail:
-
-```bash
-python scripts/part1_hypogeneration/analyze_trace.py \
-  --trace-path outputs/random100_goodhypo_program/trace.json \
-  --task-name 00d62c1b.json \
-  --hide-programs
-```
-
-Export a compact text report:
-
-```bash
-python scripts/part1_hypogeneration/analyze_trace.py \
-  --trace-path outputs/random100_goodhypo_program/trace.json \
-  --all-task-details \
-  --hide-programs \
-  --max-candidates 2 \
-  --output-path outputs/random100_goodhypo_program/analysis.txt
-```
-
-The direct-output and direct-program baselines use separate trace schemas, so inspect their JSON files directly or use the summaries in their output directories:
+Each final experiment folder contains a local `readme.md`, `trace.json`, and `results.csv`:
 
 ```text
-outputs/random100_baseline/readme.md
-outputs/random100_program/readme.md
+final_outputs/
+  0_output_grid/
+  1_program_only/
+  2_hypo_program/
+  3_hint_hypo_program/
+  4_good_hypo_program/
 ```
 
-## Main Takeaway
+Use the unified trace-to-CSV script to regenerate CSV views:
 
-On the same 100-task sample, direct output generation is weakest, direct program generation improves substantially, same-model hypothesis-plus-program is similar or slightly worse than direct program generation, and high-quality `gpt-5.5` hypotheses paired with `gpt-5.4-mini` program generation gives the strongest result by a large margin.
+```bash
+python scripts/part1_hypogeneration/trace_to_csv.py \
+  --trace-path final_outputs/4_good_hypo_program/trace.json \
+  --output-csv final_outputs/4_good_hypo_program/results.csv \
+  --view test
+```
+
+Use `--view candidates` to inspect generated hypotheses and candidate programs.
+
+For detailed result discussion, see:
+
+```text
+PART1_RESULTS_ANALYSIS.md
+```
