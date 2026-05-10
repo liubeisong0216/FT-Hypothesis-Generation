@@ -239,12 +239,26 @@ def main() -> None:
         if candidate_results:
             selected_program_index = max(
                 range(len(candidate_results)),
-                key=lambda idx: candidate_results[idx]["train_evaluation"].get("correct_count", 0),
+                key=lambda idx: (
+                    bool(
+                        candidate_results[idx]["train_evaluation"].get("pass_all")
+                    ),
+                    candidate_results[idx]["train_evaluation"].get(
+                        "correct_count", 0
+                    ),
+                    -len(candidate_results[idx]["program"]),
+                ),
             )
             selected_program = candidate_results[selected_program_index]["program"]
-            selected_train_evaluation = candidate_results[selected_program_index]["train_evaluation"]
-            selected_test_evaluation = candidate_results[selected_program_index]["test_evaluation"]
-            selected_test_predictions = per_program_test_predictions[selected_program_index] or []
+            selected_train_evaluation = candidate_results[selected_program_index][
+                "train_evaluation"
+            ]
+            selected_test_evaluation = candidate_results[selected_program_index][
+                "test_evaluation"
+            ]
+            selected_test_predictions = (
+                per_program_test_predictions[selected_program_index] or []
+            )
 
         if test_examples_with_outputs:
             top1_test_examples_total += len(test_examples_with_outputs)

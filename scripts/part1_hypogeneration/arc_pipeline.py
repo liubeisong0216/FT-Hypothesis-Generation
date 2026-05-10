@@ -640,6 +640,7 @@ def _run_program_on_test_examples(
     *,
     timeout_seconds: int = 2,
 ) -> list[dict[str, Any]]:
+    examples = list(test_examples)
     _validate_program_ast(code_str)
     compiled = compile(code_str, "<generated_program>", "exec")
     globals_dict = {"__builtins__": _safe_builtins(), "np": np, "numpy": np}
@@ -650,16 +651,39 @@ def _run_program_on_test_examples(
         raise ValueError("transform_grid is missing or not callable.")
 
     outputs: list[dict[str, Any]] = []
-    for example in test_examples:
-        with _time_limit(timeout_seconds):
-            predicted = transform_grid(np.array(example.input_grid, copy=True))
-        predicted_array = np.array(predicted, dtype=int)
-        item = {
+    for example in examples:
+        item: dict[str, Any] = {
             "example_number": example.example_number,
-            "prediction": predicted_array.tolist(),
+        }
+        try:
+            with _time_limit(timeout_seconds):
+                predicted = transform_grid(np.array(example.input_grid, copy=True))
+            predicted_array = np.array(predicted, dtype=int)
+            item["prediction"] = predicted_array.tolist()
+            if example.output_grid is not None:
+                item["matches_known_output"] = bool(
+                    np.array_equal(predicted_array, example.output_grid)
+                )
+        except Exception as exc:  # noqa: BLE001
+            item["error"] = f"{type(exc).__name__}: {exc}"
+            if example.output_grid is not None:
+                item["matches_known_output"] = False
+        outputs.append(item)
+    return outputs
+
+
+def _test_error_predictions(
+    test_examples: Iterable[ARCExample],
+    error: str,
+) -> list[dict[str, Any]]:
+    outputs: list[dict[str, Any]] = []
+    for example in test_examples:
+        item: dict[str, Any] = {
+            "example_number": example.example_number,
+            "error": error,
         }
         if example.output_grid is not None:
-            item["matches_known_output"] = bool(np.array_equal(predicted_array, example.output_grid))
+            item["matches_known_output"] = False
         outputs.append(item)
     return outputs
 
@@ -719,17 +743,31 @@ def solve_task(
 
             current_eval = candidate["evaluation"]
             best_eval = best_candidate["evaluation"]
-            current_score = (current_eval["pass_all"], current_eval["correct_count"], -len(candidate["program"]))
-            best_score = (best_eval["pass_all"], best_eval["correct_count"], -len(best_candidate["program"]))
+            current_score = (
+                current_eval["pass_all"],
+                current_eval["correct_count"],
+                -len(candidate["program"]),
+            )
+            best_score = (
+                best_eval["pass_all"],
+                best_eval["correct_count"],
+                -len(best_candidate["program"]),
+            )
             if current_score > best_score:
                 best_candidate = candidate
 
     test_predictions: list[dict[str, Any]] = []
     if best_candidate is not None and test_examples:
         try:
-            test_predictions = _run_program_on_test_examples(best_candidate["program"], test_examples)
+            test_predictions = _run_program_on_test_examples(
+                best_candidate["program"],
+                test_examples,
+            )
         except Exception as exc:  # noqa: BLE001
-            test_predictions = [{"error": f"{type(exc).__name__}: {exc}"}]
+            test_predictions = _test_error_predictions(
+                test_examples,
+                f"{type(exc).__name__}: {exc}",
+            )
 
     useful_hypotheses = sorted(
         {

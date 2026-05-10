@@ -242,8 +242,8 @@ def main() -> None:
             raise ValueError("No overlapping tasks between task list and CSV.")
     else:
         task_names = sorted(tasks)
-        if args.task_limit is not None:
-            task_names = task_names[: args.task_limit]
+    if args.task_limit is not None:
+        task_names = task_names[: args.task_limit]
 
     config = LLMConfig(
         model=args.model,
