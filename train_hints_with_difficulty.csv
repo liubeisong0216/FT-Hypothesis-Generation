@@ -1,0 +1,101 @@
+﻿task_id,hint,difficulty
+025d127b,Pay attention to which blocks stay fixed and which ones move.,Easy
+0a938d79,"The blocks’ initial positions and spacing, as well as the board’s width and height, will affect the result.",Easy
+0b148d64,"Overall, it is actually divided into several large sections, with one section in a different color.",Easy
+0d3d703e,The colors have a corresponding pattern of change.,Easy
+0dfd9992,"Fill in the missing spaces. The whole image is like a carpet, with a regular repeating arrangement.",Medium
+150deff5,"Color the blocks. In the end, only two colors and two block shapes are used.",Easy
+178fcbfb,"Pay attention to each cell’s row and column, as well as the direction in which blocks of different colors extend.",Easy
+1c786137,Notice that a single color forms a rectangle.,Easy
+1f0c79e5,The red block indicates the direction of extension.,Expert
+1f85a75f,"Clearly, one different color is clustered together.",Easy
+1f876c06,Connect the lines.,Easy
+22168020,A metaphor: filling a cup with water.,Medium
+22eb0ac0,Pair and connect.,Easy
+239be575,Pay attention to which type of block appears the most.,Medium
+253bf280,Straight-line connection,Easy
+25d8a9c8,Pay attention to the conditions that make blocks turn black or gray.,Medium
+25ff71a9,Movement,Easy
+28e73c20,"Start spiraling inward from a fixed position, and pay attention to the stopping condition.",Easy
+2c608aff,Notice where the rows and columns of the large and small blocks intersect.,Medium
+3428a4f5,Overlay the shapes and notice which parts cancel each other out.,Hard
+39e1d7f9,"Think of it as a blooming flower, and follow the pattern of the most complete one.",Easy
+3ac3eb23,Notice the downward pattern.,Easy
+3bd67248,"Notice where the red and yellow blocks start, and which directions they extend in.",Medium
+3de23699,Extract the rectangular frame,Medium
+444801d8,"Think of it as filling something up, then covering it with a lid.",Easy
+44d8ac46,Notice what causes the red blocks to appear.,Easy
+46f33fce,"Small blocks become large blocks, and the small board becomes a large board.",Medium
+48d8fb45,"Once you find the gray blocks, the puzzle becomes much easier.",Easy
+4938f0c2,Use the same pattern to complete the other three corners.,Medium
+496994bd,Look for symmetry.,Easy
+4be741c5,Notice the order in which the blocks are arranged.,Medium
+4c5c2cf0,Use the same pattern to complete the other three corners.,Easy
+50846271,Complete the cross shape.,Hard
+50cb2852,Fill in the middle layer.,Easy
+54d82841,Like shooting a bullet.,Easy
+5c0a986e,Begin from a corner and follow the pattern.,Easy
+5c2c9af4,"The middle point becomes the center, and the surrounding points connect to form a frame.",Expert
+5daaa586,"Notice the middle frame, the same-colored edges, and the points within the frame.",Medium
+60b61512,Fill it in to form a cube.,Easy
+623ea044,Expand from the four corners.,Easy
+63613498,"Notice the shape inside the gray frame, and the matching shape outside it that changes color.",Hard
+6773b310,"Divide the board into a 3×3 grid. For each large cell, its position and the number of pink and purple blocks inside determine whether it should be blue.",Medium
+67a423a3,Find the intersection point.,Easy
+6cf79266,Find the cube.,Easy
+6e02f1e3,Notice how the number of different colors relates to the way the gray blocks are arranged in the output.,Easy
+72322fa7,Use the center point’s color and pattern as a guide to complete the rest consistently.,Medium
+73251a56,"Notice that each image follows the same pattern, with only the colors changed.",Hard
+7468f01a,Flip,Medium
+776ffc46,Use the complete gray-framed shape as a pattern-copying brush.,Easy
+780d0b14,Look for the block divisions to simplify the pattern.,Easy
+794b24be,Notice how the number of blue blocks relates to the way the red blocks are arranged.,Easy
+7b6016b9,Pay attention to which positions form a closed shape.,Easy
+7ddcd7ec,Use the antennae as the starting point.,Easy
+7fe24cdd,Rotate around a certain point.,Medium
+80af3007,The missing part of the large block determines the missing part of the small block.,Hard
+88a10436,The gray point is the center point for pasting.,Easy
+8eb1be9a,Repeat the pattern with consistent spacing.,Easy
+8f2ea7aa,"Duplicate the pattern, using the small cells as clues for where the large cells should have gaps.",Expert
+95990924,Pay attention to where the four colored blocks appear.,Easy
+97a05b5b,Rotate and move the cube to fill in the red missing area.,Medium
+99b1bc43,"Overlap them, and different colors cancel each other out.",Hard
+99fa7670,Horizontal stroke and turn,Easy
+a740d043,Crop out the shape,Easy
+b0c4d837,Notice how many layers in the cup are still empty.,Medium
+b190f7f5,"One color represents the shape, while the other figure represents the color.",Hard
+b527c5c6,"The red dot marks the launch position, and the width determines the firing width.",Medium
+b6afb2da,Fill in the blocks using a certain pattern.,Easy
+b782dc8a,Fill it in alternately.,Easy
+b8cdaf2b,Start from two corners.,Easy
+bc1d5164,Use the patterns from the four corners to form a cube.,Medium
+c0f76784,The size of the square determines the color.,Easy
+c1d99e64,Look for the line that passes all the way through.,Easy
+c8f0f002,One color has changed.,Easy
+c909285e,Notice that a single color forms a rectangle.,Easy
+c9f8e694,The leftmost column represents the color of each row.,Easy
+ce22a75a,Use each point as the center and expand it into a cube.,Easy
+d037b0a7,Color downward from each point.,Easy
+d07ae81c,"Start from the four corners of each point and extend outward, using different colors for different regions.",Easy
+d22278a0,"Spread outward from each point like ripples in water, and cancel out where two waves meet.",Medium
+d43fd935,Find the row and column intersections between the 2×2 green block and the other points.,Easy
+d8c310e9,Continue the pattern to the right until it is complete.,Easy
+dae9d2b5,"Overlay the left and right sides, then take the union.",Easy
+ddf7fa4f,Change the color based on the row and column intersections between the large block and the small cells.,Easy
+e21d9049,"Notice the color sequence in each row and column, then continue it as a repeating pattern.",Medium
+e3497940,"Fold it like paper, using mirror symmetry.",Expert
+e6721834,Copy the blocks from one side onto the matching positions on the other side.,Easy
+e73095fd,Fill the enclosed or partially enclosed edge areas with color.,Easy
+e8593010,"Pay attention to how many cells are connected, as this can determine the color.",Easy
+e98196ab,"Overlay the up and down sides, then take the union.",Easy
+ec883f72,Shoot the inner color from the corner.,Easy
+ed36ccf7,Rotate,Medium
+f15e1fac,Shift by one cell whenever you reach a specified point.,Medium
+f25fbde4,Divide each cell into a 2×2 grid.,Medium
+f25ffba3,Vertically symmetrical,Easy
+f5b8619d,"Fill the entire column where the point is located, then duplicate it four times.",Easy
+f76d97a5,"Fill with gray, then remove the rest.",Easy
+f8b3ba0a,"For each 2×1 block, count the colors and remove the most frequent one.",Easy
+fafffa47,"Overlay the shapes, then take the complement.",Hard
+fcc82909,Fill downward for the corresponding number of rows based on the number of color types.,Medium
+ff805c23,"Output the cells that should belong to the blue area, using central symmetry.",Hard
