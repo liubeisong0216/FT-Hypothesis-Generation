@@ -36,7 +36,6 @@ data/
 
 # outputs
 outputs/
-final_outputs/
 
 # slurm logs
 slurm/

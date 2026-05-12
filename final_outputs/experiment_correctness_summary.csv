@@ -1,0 +1,106 @@
+task_id,difficulty,hint,example_number,0_baseline_correct,1_program_only_correct,2_hypo_program_correct,3_hint_hypo_program_correct,4_good_hypo_program_correct
+025d127b,Easy,Pay attention to which blocks stay fixed and which ones move.,1,True,False,False,False,False
+0a938d79,Easy,"The blocks’ initial positions and spacing, as well as the board’s width and height, will affect the result.",1,False,False,False,False,True
+0b148d64,Easy,"Overall, it is actually divided into several large sections, with one section in a different color.",1,False,True,False,False,True
+0d3d703e,Easy,The colors have a corresponding pattern of change.,1,False,True,True,False,True
+0dfd9992,Medium,"Fill in the missing spaces. The whole image is like a carpet, with a regular repeating arrangement.",1,False,False,True,True,True
+150deff5,Easy,"Color the blocks. In the end, only two colors and two block shapes are used.",1,False,False,False,False,False
+178fcbfb,Easy,"Pay attention to each cell’s row and column, as well as the direction in which blocks of different colors extend.",1,False,False,False,False,True
+1c786137,Easy,Notice that a single color forms a rectangle.,1,False,False,False,False,True
+1f0c79e5,Expert,The red block indicates the direction of extension.,1,False,False,False,False,False
+1f85a75f,Easy,"Clearly, one different color is clustered together.",1,False,False,False,False,True
+1f876c06,Easy,Connect the lines.,1,False,True,False,True,True
+22168020,Medium,A metaphor: filling a cup with water.,1,False,True,True,True,False
+22eb0ac0,Easy,Pair and connect.,1,False,True,True,True,True
+239be575,Medium,Pay attention to which type of block appears the most.,1,False,True,True,True,True
+239be575,Medium,Pay attention to which type of block appears the most.,2,False,False,False,False,True
+253bf280,Easy,Straight-line connection,1,False,False,True,True,True
+25d8a9c8,Medium,Pay attention to the conditions that make blocks turn black or gray.,1,False,True,False,True,True
+25ff71a9,Easy,Movement,1,True,True,True,True,True
+25ff71a9,Easy,Movement,2,True,True,True,True,True
+28e73c20,Easy,"Start spiraling inward from a fixed position, and pay attention to the stopping condition.",1,False,False,False,False,False
+2c608aff,Medium,Notice where the rows and columns of the large and small blocks intersect.,1,False,False,False,False,True
+3428a4f5,Hard,Overlay the shapes and notice which parts cancel each other out.,1,False,False,False,True,True
+3428a4f5,Hard,Overlay the shapes and notice which parts cancel each other out.,2,False,False,False,True,True
+39e1d7f9,Easy,"Think of it as a blooming flower, and follow the pattern of the most complete one.",1,False,False,False,False,False
+3ac3eb23,Easy,Notice the downward pattern.,1,False,False,False,True,True
+3bd67248,Medium,"Notice where the red and yellow blocks start, and which directions they extend in.",1,True,True,True,True,True
+3de23699,Medium,Extract the rectangular frame,1,False,False,False,False,True
+444801d8,Easy,"Think of it as filling something up, then covering it with a lid.",1,False,False,True,False,True
+44d8ac46,Easy,Notice what causes the red blocks to appear.,1,False,False,False,False,True
+46f33fce,Medium,"Small blocks become large blocks, and the small board becomes a large board.",1,False,True,False,False,True
+48d8fb45,Easy,"Once you find the gray blocks, the puzzle becomes much easier.",1,False,False,True,False,True
+4938f0c2,Medium,Use the same pattern to complete the other three corners.,1,False,False,False,False,True
+496994bd,Easy,Look for symmetry.,1,True,True,False,True,True
+4be741c5,Medium,Notice the order in which the blocks are arranged.,1,False,False,False,False,False
+4c5c2cf0,Easy,Use the same pattern to complete the other three corners.,1,False,False,False,False,True
+50846271,Hard,Complete the cross shape.,1,False,False,False,False,False
+50cb2852,Easy,Fill in the middle layer.,1,False,False,False,False,True
+54d82841,Easy,Like shooting a bullet.,1,False,True,False,False,True
+5c0a986e,Easy,Begin from a corner and follow the pattern.,1,False,False,False,False,True
+5c2c9af4,Expert,"The middle point becomes the center, and the surrounding points connect to form a frame.",1,False,False,False,False,True
+5daaa586,Medium,"Notice the middle frame, the same-colored edges, and the points within the frame.",1,False,False,False,False,False
+60b61512,Easy,Fill it in to form a cube.,1,False,False,False,False,False
+623ea044,Easy,Expand from the four corners.,1,False,True,True,True,True
+63613498,Hard,"Notice the shape inside the gray frame, and the matching shape outside it that changes color.",1,False,False,False,True,True
+6773b310,Medium,"Divide the board into a 3×3 grid. For each large cell, its position and the number of pink and purple blocks inside determine whether it should be blue.",1,False,False,False,False,True
+67a423a3,Easy,Find the intersection point.,1,False,False,False,False,True
+6cf79266,Easy,Find the cube.,1,False,False,False,False,True
+6e02f1e3,Easy,Notice how the number of different colors relates to the way the gray blocks are arranged in the output.,1,False,True,False,True,True
+72322fa7,Medium,Use the center point’s color and pattern as a guide to complete the rest consistently.,1,False,False,False,False,True
+73251a56,Hard,"Notice that each image follows the same pattern, with only the colors changed.",1,False,False,False,False,True
+7468f01a,Medium,Flip,1,False,False,False,False,True
+776ffc46,Easy,Use the complete gray-framed shape as a pattern-copying brush.,1,False,False,False,False,False
+780d0b14,Easy,Look for the block divisions to simplify the pattern.,1,False,False,False,True,True
+794b24be,Easy,Notice how the number of blue blocks relates to the way the red blocks are arranged.,1,True,True,False,True,True
+794b24be,Easy,Notice how the number of blue blocks relates to the way the red blocks are arranged.,2,True,True,False,True,True
+7b6016b9,Easy,Pay attention to which positions form a closed shape.,1,False,False,False,False,True
+7ddcd7ec,Easy,Use the antennae as the starting point.,1,False,False,False,False,True
+7fe24cdd,Medium,Rotate around a certain point.,1,False,True,True,True,True
+80af3007,Hard,The missing part of the large block determines the missing part of the small block.,1,False,False,False,False,True
+88a10436,Easy,The gray point is the center point for pasting.,1,False,False,False,False,True
+8eb1be9a,Easy,Repeat the pattern with consistent spacing.,1,False,True,False,True,True
+8f2ea7aa,Expert,"Duplicate the pattern, using the small cells as clues for where the large cells should have gaps.",1,False,False,False,False,True
+95990924,Easy,Pay attention to where the four colored blocks appear.,1,False,True,True,False,True
+97a05b5b,Medium,Rotate and move the cube to fill in the red missing area.,1,False,False,False,False,False
+99b1bc43,Hard,"Overlap them, and different colors cancel each other out.",1,False,True,True,True,True
+99fa7670,Easy,Horizontal stroke and turn,1,True,True,True,True,True
+a740d043,Easy,Crop out the shape,1,False,True,True,True,True
+b0c4d837,Medium,Notice how many layers in the cup are still empty.,1,False,False,False,False,True
+b190f7f5,Hard,"One color represents the shape, while the other figure represents the color.",1,False,False,False,False,False
+b527c5c6,Medium,"The red dot marks the launch position, and the width determines the firing width.",1,False,False,False,False,True
+b6afb2da,Easy,Fill in the blocks using a certain pattern.,1,False,True,False,True,True
+b782dc8a,Easy,Fill it in alternately.,1,False,False,False,False,True
+b8cdaf2b,Easy,Start from two corners.,1,False,False,False,False,True
+bc1d5164,Medium,Use the patterns from the four corners to form a cube.,1,False,False,False,True,True
+c0f76784,Easy,The size of the square determines the color.,1,True,True,True,True,True
+c1d99e64,Easy,Look for the line that passes all the way through.,1,False,False,False,False,True
+c8f0f002,Easy,One color has changed.,1,True,True,True,True,True
+c909285e,Easy,Notice that a single color forms a rectangle.,1,False,False,False,False,True
+c9f8e694,Easy,The leftmost column represents the color of each row.,1,True,True,True,True,True
+ce22a75a,Easy,Use each point as the center and expand it into a cube.,1,False,True,True,True,True
+d037b0a7,Easy,Color downward from each point.,1,True,True,False,True,True
+d07ae81c,Easy,"Start from the four corners of each point and extend outward, using different colors for different regions.",1,False,False,False,False,False
+d22278a0,Medium,"Spread outward from each point like ripples in water, and cancel out where two waves meet.",1,False,False,False,False,True
+d43fd935,Easy,Find the row and column intersections between the 2×2 green block and the other points.,1,False,False,False,True,True
+d8c310e9,Easy,Continue the pattern to the right until it is complete.,1,True,False,False,True,True
+dae9d2b5,Easy,"Overlay the left and right sides, then take the union.",1,False,True,False,True,True
+dae9d2b5,Easy,"Overlay the left and right sides, then take the union.",2,True,True,False,True,True
+ddf7fa4f,Easy,Change the color based on the row and column intersections between the large block and the small cells.,1,False,False,True,True,True
+e21d9049,Medium,"Notice the color sequence in each row and column, then continue it as a repeating pattern.",1,False,False,False,False,True
+e3497940,Expert,"Fold it like paper, using mirror symmetry.",1,False,False,False,True,True
+e6721834,Easy,Copy the blocks from one side onto the matching positions on the other side.,1,False,False,False,False,False
+e73095fd,Easy,Fill the enclosed or partially enclosed edge areas with color.,1,False,False,False,False,False
+e8593010,Easy,"Pay attention to how many cells are connected, as this can determine the color.",1,False,False,True,False,True
+e98196ab,Easy,"Overlay the up and down sides, then take the union.",1,False,True,True,True,True
+ec883f72,Easy,Shoot the inner color from the corner.,1,False,False,False,False,False
+ed36ccf7,Medium,Rotate,1,False,False,True,True,True
+f15e1fac,Medium,Shift by one cell whenever you reach a specified point.,1,False,False,False,False,False
+f25fbde4,Medium,Divide each cell into a 2×2 grid.,1,False,False,True,False,True
+f25ffba3,Easy,Vertically symmetrical,1,False,True,False,True,True
+f5b8619d,Easy,"Fill the entire column where the point is located, then duplicate it four times.",1,False,False,False,False,True
+f76d97a5,Easy,"Fill with gray, then remove the rest.",1,False,True,False,False,True
+f8b3ba0a,Easy,"For each 2×1 block, count the colors and remove the most frequent one.",1,False,False,True,False,True
+fafffa47,Hard,"Overlay the shapes, then take the complement.",1,False,False,False,True,True
+fcc82909,Medium,Fill downward for the corresponding number of rows based on the number of color types.,1,False,False,False,True,True
+ff805c23,Hard,"Output the cells that should belong to the blue area, using central symmetry.",1,False,False,False,False,True

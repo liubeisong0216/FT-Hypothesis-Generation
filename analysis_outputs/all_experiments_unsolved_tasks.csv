@@ -1,0 +1,17 @@
+task_id,difficulty,0_output_grid_correct_examples,0_output_grid_test_examples,0_output_grid_example_accuracy,1_program_only_correct_examples,1_program_only_test_examples,1_program_only_example_accuracy,2_hypo_program_correct_examples,2_hypo_program_test_examples,2_hypo_program_example_accuracy,3_hint_hypo_program_correct_examples,3_hint_hypo_program_test_examples,3_hint_hypo_program_example_accuracy,4_good_hypo_program_correct_examples,4_good_hypo_program_test_examples,4_good_hypo_program_example_accuracy
+150deff5,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+28e73c20,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+39e1d7f9,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+60b61512,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+776ffc46,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+d07ae81c,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+e6721834,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+e73095fd,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+ec883f72,Easy,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+4be741c5,Medium,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+5daaa586,Medium,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+97a05b5b,Medium,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+f15e1fac,Medium,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+50846271,Hard,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+b190f7f5,Hard,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0
+1f0c79e5,Expert,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0,0,1,0.0

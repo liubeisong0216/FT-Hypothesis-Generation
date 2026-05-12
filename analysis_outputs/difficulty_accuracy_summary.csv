@@ -1,0 +1,21 @@
+experiment_order,experiment_folder,experiment_name,difficulty,task_count,solved_tasks,task_accuracy,task_accuracy_pct,test_examples,correct_test_examples,example_accuracy,example_accuracy_pct
+0,0_output_grid,Direct Output Grid,Easy,62,10,0.16129032258064516,16.13,65,13,0.2,20.0
+0,0_output_grid,Direct Output Grid,Medium,25,1,0.04,4.0,26,1,0.038461538461538464,3.85
+0,0_output_grid,Direct Output Grid,Hard,9,0,0.0,0.0,10,0,0.0,0.0
+0,0_output_grid,Direct Output Grid,Expert,4,0,0.0,0.0,4,0,0.0,0.0
+1,1_program_only,Program Only,Easy,62,24,0.3870967741935484,38.71,65,27,0.4153846153846154,41.54
+1,1_program_only,Program Only,Medium,25,5,0.2,20.0,26,6,0.23076923076923078,23.08
+1,1_program_only,Program Only,Hard,9,1,0.1111111111111111,11.11,10,1,0.1,10.0
+1,1_program_only,Program Only,Expert,4,0,0.0,0.0,4,0,0.0,0.0
+2,2_hypo_program,Hypothesis + Program,Easy,62,18,0.2903225806451613,29.03,65,19,0.2923076923076923,29.23
+2,2_hypo_program,Hypothesis + Program,Medium,25,6,0.24,24.0,26,7,0.2692307692307692,26.92
+2,2_hypo_program,Hypothesis + Program,Hard,9,1,0.1111111111111111,11.11,10,1,0.1,10.0
+2,2_hypo_program,Hypothesis + Program,Expert,4,0,0.0,0.0,4,0,0.0,0.0
+3,3_hint_hypo_program,Hint + Hypothesis + Program,Easy,62,25,0.4032258064516129,40.32,65,28,0.4307692307692308,43.08
+3,3_hint_hypo_program,Hint + Hypothesis + Program,Medium,25,8,0.32,32.0,26,9,0.34615384615384615,34.62
+3,3_hint_hypo_program,Hint + Hypothesis + Program,Hard,9,4,0.4444444444444444,44.44,10,5,0.5,50.0
+3,3_hint_hypo_program,Hint + Hypothesis + Program,Expert,4,1,0.25,25.0,4,1,0.25,25.0
+4,4_good_hypo_program,High Quality Hypothesis + Program,Easy,62,52,0.8387096774193549,83.87,65,55,0.8461538461538461,84.62
+4,4_good_hypo_program,High Quality Hypothesis + Program,Medium,25,20,0.8,80.0,26,21,0.8076923076923077,80.77
+4,4_good_hypo_program,High Quality Hypothesis + Program,Hard,9,7,0.7777777777777778,77.78,10,8,0.8,80.0
+4,4_good_hypo_program,High Quality Hypothesis + Program,Expert,4,3,0.75,75.0,4,3,0.75,75.0

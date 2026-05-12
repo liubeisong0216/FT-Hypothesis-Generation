@@ -1,6 +1,7 @@
-# Part 1 Experiment Overview
+# Experiment Overview
 
-This repository currently focuses on Part 1: ARC-style hypothesis generation, program generation, and execution-based evaluation. The fine-tuning pipeline in `scripts/part2_ft/` is not used for these experiments.
+This repository currently focuses on ARC-style hypothesis generation, program generation, and execution-based evaluation. 
+The fine-tuning pipeline in `scripts/part2_ft/` is not used for these experiments, which could be our future research direction.
 
 All experiments use the same 100-task random sample:
 
@@ -63,6 +64,7 @@ Configuration:
 - Program generation: none
 - Output generation model: `gpt-5.4-mini`
 - Candidates per test example: `6`
+- Optional: `--fallback-on-parse-error` retries with per-candidate requests if the single-call response fails to parse or returns fewer than `num-candidates` (see `baseline_direct_output.py`).
 - Final output directory: `final_outputs/0_output_grid/`
 
 Run:
@@ -73,6 +75,7 @@ python scripts/part1_hypogeneration/baseline_direct_output.py \
   --task-list-path data/task_data/train_random100_seed42.txt \
   --model gpt-5.4-mini \
   --num-candidates 6 \
+  --fallback-on-parse-error \
   --output-json outputs/random100_baseline/trace.json
 ```
 
@@ -208,3 +211,30 @@ python scripts/part1_hypogeneration/trace_to_csv.py \
 ```
 
 Use `--view candidates` to inspect generated hypotheses and candidate programs.
+
+# Results
+
+
+| Experiment | Hypothesis Model | Program Model | Test Example Accuracy | Task Accuracy |
+| --- | --- | --- | --- | --- |
+| Direct Output Grid | None | None | 14/105 = 13.33% | 11/100 = 11% |
+| Program Only | None | GPT-5.4-mini | 34/105 = 32.38% | 30/100 = 30% |
+| Hypothesis + Program | GPT-5.4-mini | GPT-5.4-mini | 27/105 = 25.71% | 25/100 = 25% |
+| Hint + Hypothesis + Program | GPT-5.4-mini + human hint | GPT-5.4-mini | 43/105 = 40.95% | 38/100 = 38% |
+| High Quality Hypothesis + Program | GPT-5.5 | GPT-5.4-mini | 87/105 = 82.86% | 82/100 = 82% |
+
+
+## Difficulty Breakdown
+
+Task accuracy by difficulty:
+
+| Experiment | Easy | Medium | Hard | Expert |
+| --- | --- | --- | --- | --- |
+| Direct Output Grid | 10/62 = 16.1% | 1/25 = 4.0% | 0/9 = 0.0% | 0/4 = 0.0% |
+| Program Only | 24/62 = 38.7% | 5/25 = 20.0% | 1/9 = 11.1% | 0/4 = 0.0% |
+| Hypothesis + Program | 18/62 = 29.0% | 6/25 = 24.0% | 1/9 = 11.1% | 0/4 = 0.0% |
+| Hint + Hypothesis + Program | 25/62 = 40.3% | 8/25 = 32.0% | 4/9 = 44.4% | 1/4 = 25.0% |
+| High Quality Hypothesis + Program | 52/62 = 83.9% | 20/25 = 80.0% | 7/9 = 77.8% | 3/4 = 75.0% |
+
+
+
